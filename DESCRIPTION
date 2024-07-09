@@ -1,0 +1,15 @@
+Package: bmpmicroplasticsshiny
+Title: BMP Microplastics Shiny
+Version: 0.0.0.1
+Authors@R: person('Duy', 'Nguyen', email = 'duyn@sccwrp.org', role = c('cre', 'aut'))
+Description: Visualization Tool for BMP Microplastics CSULB Project
+License: MIT + file LICENSE
+Imports: 
+    config (>= 0.3.2),
+    golem (>= 0.4.1),
+    shiny (>= 1.7.2)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
+URL: https://github.com/SCCWRP/bmp_microplastics_shiny.git
+BugReports: https://github.com/SCCWRP/bmp_microplastics_shiny.git/issues
