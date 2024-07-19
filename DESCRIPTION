@@ -19,7 +19,8 @@ Imports:
     RPostgreSQL,
     shiny (>= 1.7.2),
     shinycssloaders,
-    shinyjs
+    shinyjs,
+    thematic
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
@@ -29,3 +30,5 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Depends: 
+    showtext

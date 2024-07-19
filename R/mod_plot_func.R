@@ -103,7 +103,7 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
 
       # Group by location and event, and sum the concentration
       final_result <- result %>%
-        filter(!is.na(concentration)) %>%
+        filter(!is.na(concentration) & is.finite(concentration)) %>%
         group_by(location, event) %>%
         summarize(total_concentration = sum(concentration)) %>%
         ungroup()
@@ -126,13 +126,13 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       COLOR_PALETTE <- c(`1`="#0000FF0A", `2`="#00008B", `3` = "#FFC0CB", `4` = "#8B0000")
 
       final_result <- data$final_result
-      dodge <- position_dodge(width = 0.5)
+      dodge <- position_dodge(width = 0.7)
       y_lim <- max(final_result$total_concentration) + (max(final_result$total_concentration) * 0.1)
 
       ggplot(final_result, aes(x = location, y = total_concentration, group = event, fill = as.factor(event))) +
         geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black") +
-        geom_text(aes(label = round(total_concentration, 2)),
-                  position = position_dodge(width = 0.5),
+        geom_text(aes(label = round(total_concentration, 1)),
+                  position = dodge,
                   vjust = -0.5,
                   size = 6) +
         ylim(0, y_lim) +
@@ -146,8 +146,12 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
           axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "right",
           legend.text = element_text(size = 20),
-          text = element_text(size = 24)
+          text = element_text(size = 30)
         )
+
+
+
+
     })
 
     # Download handler for constants dataframe
