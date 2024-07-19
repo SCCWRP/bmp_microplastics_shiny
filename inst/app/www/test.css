@@ -1,0 +1,25 @@
+
+body {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+.selectize-input, .selectize-dropdown {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+.form-control {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+.shiny-text-output, .shiny-html-output {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: Arial, sans-serif;
+    font-size: 24px;
+}

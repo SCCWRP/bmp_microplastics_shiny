@@ -2,15 +2,19 @@
 #'
 #' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
-#' @import shiny
+#' @import shiny bslib
 #' @noRd
+
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # Your application UI logic
-    fluidPage(
-      h1("bmp_microplastics_shiny")
+    shinyjs::useShinyjs(),
+    page_navbar(
+      title = "BMP Microplastics",
+      theme = bs_theme(preset = "cosmo"),
+      nav_panel(title = "Main", mod_plot_func_ui("plot_func_1" , pool))
     )
   )
 }
@@ -33,7 +37,7 @@ golem_add_external_resources <- function() {
     favicon(),
     bundle_resources(
       path = app_sys("app/www"),
-      app_title = "bmp_microplastics_shiny"
+      app_title = "BMP Microplastics Shiny App"
     )
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
