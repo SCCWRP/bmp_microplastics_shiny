@@ -30,19 +30,22 @@ mod_plot_func_ui <- function(id, pool){
 
   card_select <- bslib::card(
     full_screen = TRUE,
-    card_header("Menu"),
+    card_header("Control Panel"),
     card_body(
       class = "fs-6",
       selectInput(ns('bmp_select'), 'Select a BMP:', choices = bmps),
       selectInput(ns('year_select'), 'Select a Year:', choices = years),
-      downloadButton(ns("download_constants"), "Download Constants")
+
+      downloadButton(ns("download_constants"), "Download Constants"),
+      downloadButton(ns("download_rawall"), "Download Microscopy Raw Data"),
+      downloadButton(ns("download_rawftir"), "Download Spectroscopy Raw Data")
 
     )
   )
 
   card_plot <- bslib::card(
     full_screen = TRUE,
-    card_header("Plot"),
+    card_header("Plots"),
     card_body(
       class = "fs-6",
       shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 7),
@@ -72,7 +75,7 @@ mod_plot_func_ui <- function(id, pool){
 #' @noRd
 #' @import ggplot2 glue dplyr
 
-mod_plot_func_server <- function(id, pool){
+mod_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     # Reactive expression to load and process data
@@ -81,16 +84,8 @@ mod_plot_func_server <- function(id, pool){
       selected_bmp <- input$bmp_select
       selected_year <- input$year_select
 
-      data_qry <- glue(
-        "SELECT * FROM tbl_bmp_particle_raw_all
-        WHERE location != 'not applicable'
-        AND bmp = '{selected_bmp}'
-        AND year = '{selected_year}'"
-      )
-      constants_qry <- "SELECT * FROM bmp_constants"
-
-      dat <- pool::dbGetQuery(pool, data_qry)
-      constants <- pool::dbGetQuery(pool, constants_qry) %>% select(-objectid)
+      dat <- raw_data_list$dat_rawall
+      constants <- raw_data_list$constants
 
       # FILTERING
       dat <- dat %>% filter(bmp == selected_bmp & year == selected_year)
@@ -103,17 +98,12 @@ mod_plot_func_server <- function(id, pool){
       # Left join with constants
       result <- grouped_dat %>%
         left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-        arrange(bmp, year, event, location, matrix, size_fraction, replicate)
-
-      filtered_result <- result %>%
-        filter(!is.na(unit_passing))
-
-      # Calculate concentration
-      filtered_result <- filtered_result %>%
+        arrange(bmp, year, event, location, matrix, size_fraction, replicate) %>%
         mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
 
       # Group by location and event, and sum the concentration
-      final_result <- filtered_result %>%
+      final_result <- result %>%
+        filter(!is.na(concentration)) %>%
         group_by(location, event) %>%
         summarize(total_concentration = sum(concentration)) %>%
         ungroup()
@@ -147,7 +137,7 @@ mod_plot_func_server <- function(id, pool){
                   size = 6) +
         ylim(0, y_lim) +
         scale_fill_manual(values = COLOR_PALETTE) +
-        labs(title = "All particle's concentration",
+        labs(title = glue("{input$bmp_select} - Year {input$year_select}"),
              x = "Location",
              y = "Concentration (P/L)",
              fill = "Event") +
@@ -171,10 +161,27 @@ mod_plot_func_server <- function(id, pool){
       }
     )
 
-    # Download handler for result dataframe
+    output$download_rawall <- downloadHandler(
+      filename = function() {
+        paste("microscopy-raw-data-", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(raw_data_list$dat_rawall, file, row.names = FALSE)
+      }
+    )
+
+    output$download_rawftir <- downloadHandler(
+      filename = function() {
+        paste("spectroscopy-raw-data-", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(raw_data_list$dat_rawftir, file, row.names = FALSE)
+      }
+    )
+
     output$download_summary <- downloadHandler(
       filename = function() {
-        paste("result-", Sys.Date(), ".csv", sep = "")
+        paste("summary-data-", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
         data <- processed_data()
