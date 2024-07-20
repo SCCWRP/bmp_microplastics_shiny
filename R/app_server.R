@@ -7,6 +7,18 @@
 
 app_server <- function(input, output, session) {
 
+
+  credentials <- data.frame(
+    user = c("sccwrp"),
+    password = c(Sys.getenv("apppw"))
+  )
+
+
+  res_auth <- shinymanager::secure_server(
+    check_credentials = shinymanager::check_credentials(credentials)
+  )
+
+
   pool <- pool::dbPool(
     drv = RPostgreSQL::PostgreSQL(),
     dbname = Sys.getenv("dbname"),
@@ -17,9 +29,9 @@ app_server <- function(input, output, session) {
 
   excluded_cols <- c('login_email', 'created_date', 'submissionid', 'warnings', 'last_edited_date', 'globalid', 'created_user', 'last_edited_user')
 
-  dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all WHERE location != 'not applicable'" )
-  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_ftir WHERE location != 'not applicable'")
-  constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants")
+  dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid" )
+  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_ftir WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
+  constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
 
 
   # Exclude columns that are actually present in the constants data frame

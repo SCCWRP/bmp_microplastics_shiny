@@ -20,6 +20,7 @@ Imports:
     shiny (>= 1.7.2),
     shinycssloaders,
     shinyjs,
+    shinymanager,
     thematic
 Encoding: UTF-8
 LazyData: true

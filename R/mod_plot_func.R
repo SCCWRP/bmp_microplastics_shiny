@@ -54,7 +54,7 @@ mod_plot_func_ui <- function(id, pool){
     card_header("Plots"),
     card_body(
       class = "fs-6",
-      shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 7),
+      shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
       downloadButton(ns("download_summary"), "Download Summary Data for the Selected BMP and Year")
     )
   )
@@ -123,9 +123,9 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       selected_year <- input$year_select
       selected_sizefraction <- input$sizefraction_select
 
-      print(selected_bmp)
-      print(selected_year)
-      print(selected_sizefraction)
+      # print(selected_bmp)
+      # print(selected_year)
+      # print(selected_sizefraction)
 
 
       dat <- raw_data_list$dat_rawall
