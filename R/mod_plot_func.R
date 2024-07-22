@@ -18,21 +18,6 @@ mod_plot_func_ui <- function(id, pool){
     password = Sys.getenv("password")
   )
 
-  # bmps <- pool::dbGetQuery(
-  #   pool,
-  #   'SELECT DISTINCT bmp from tbl_bmp_particle_raw_all ORDER BY bmp'
-  # )$bmp
-  #
-  # years <- pool::dbGetQuery(
-  #   pool,
-  #   'SELECT DISTINCT year from tbl_bmp_particle_raw_all ORDER BY year'
-  # )$year
-  #
-  # size_fraction <- pool::dbGetQuery(
-  #   pool,
-  #   'SELECT DISTINCT size_fraction from tbl_bmp_particle_raw_all ORDER BY size_fraction'
-  # )$size_fraction
-
   card_select <- bslib::card(
     full_screen = TRUE,
     card_header("Control Panel"),
@@ -41,6 +26,7 @@ mod_plot_func_ui <- function(id, pool){
       selectInput(ns("bmp_select"), "Select BMP:", choices = NULL),
       selectInput(ns("year_select"), "Select Year:", choices = NULL),
       selectInput(ns("sizefraction_select"), "Select Size Fraction:", choices = NULL),
+      selectInput(ns("replicate_select"), "Select Replicate:", choices = NULL),
 
       downloadButton(ns("download_constants"), "Download Constants"),
       downloadButton(ns("download_rawall"), "Download Microscopy Raw Data"),
@@ -69,7 +55,6 @@ mod_plot_func_ui <- function(id, pool){
         heights_equal = "row",
       ),
       card_plot
-
     )
   )
 
@@ -101,6 +86,14 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       pool::dbGetQuery(pool, glue::glue("SELECT DISTINCT size_fraction FROM tbl_bmp_particle_raw_all WHERE bmp = '{input$bmp_select}' AND year = '{input$year_select}' ORDER BY size_fraction"))$size_fraction
     })
 
+    replicate <- reactive({
+      req(input$bmp_select, input$year_select, input$sizefraction_select)
+      pool::dbGetQuery(pool, glue::glue(
+        "SELECT DISTINCT replicate FROM tbl_bmp_particle_raw_all
+        WHERE bmp::VARCHAR = '{input$bmp_select}' AND year::VARCHAR = '{input$year_select}' AND size_fraction::VARCHAR = '{input$sizefraction_select}'
+        ORDER BY replicate"))$replicate
+    })
+
     # Initialize BMP choices when app starts
     observe({
       updateSelectInput(session, "bmp_select", choices = bmps())
@@ -114,6 +107,10 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       updateSelectInput(session, "sizefraction_select", choices = size_fraction())
     })
 
+    observeEvent(input$sizefraction_select, {
+      updateSelectInput(session, "replicate_select", choices = replicate())
+    })
+
 
 
     # Reactive expression to load and process data
@@ -122,17 +119,18 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       selected_bmp <- input$bmp_select
       selected_year <- input$year_select
       selected_sizefraction <- input$sizefraction_select
+      selected_replicate <- input$replicate_select
 
       # print(selected_bmp)
       # print(selected_year)
-      # print(selected_sizefraction)
+      print(selected_replicate)
 
 
       dat <- raw_data_list$dat_rawall
       constants <- raw_data_list$constants
 
       # FILTERING
-      dat <- dat %>% filter(bmp == selected_bmp & year == selected_year & size_fraction == selected_sizefraction)
+      dat <- dat %>% filter(bmp == selected_bmp & year == selected_year & size_fraction == selected_sizefraction & replicate == selected_replicate)
 
       grouped_dat <- dat %>%
         group_by(bmp, year, event, location, matrix, size_fraction, replicate) %>%
@@ -183,7 +181,7 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
                   size = 6) +
         ylim(0, y_lim) +
         scale_fill_manual(values = COLOR_PALETTE) +
-        labs(title = glue("{input$bmp_select} - Year {input$year_select} - SF {input$sizefraction_select}"),
+        labs(title = glue("{input$bmp_select} - Year {input$year_select} - SF {input$sizefraction_select} - Rep {input$replicate_select}"),
              x = "Location",
              y = "Concentration (P/L)",
              fill = "Event") +
