@@ -30,7 +30,8 @@ mod_plot_func_ui <- function(id, pool){
 
       downloadButton(ns("download_constants"), "Download Constants"),
       downloadButton(ns("download_rawall"), "Download Microscopy Raw Data"),
-      downloadButton(ns("download_rawftir"), "Download Spectroscopy Raw Data")
+      downloadButton(ns("download_rawftir"), "Download Spectroscopy Raw Data"),
+      downloadButton(ns("download_summaryall"), "Download Spectroscopy Summary Data")
 
     )
   )
@@ -231,6 +232,15 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       content = function(file) {
         data <- processed_data()
         write.csv(data$result, file, row.names = FALSE)
+      }
+    )
+
+    output$download_summaryall <- downloadHandler(
+      filename = function() {
+        paste("summary-all-microscopy-", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(raw_data_list$dat_summaryall, file, row.names = FALSE)
       }
     )
 
