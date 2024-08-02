@@ -53,6 +53,7 @@ app_server <- function(input, output, session) {
   })
 
   mod_plot_func_server("plot_func_1", pool, raw_data_list)
-
+  mod_pie_plot_func_server("pie_plot_func_1", pool, raw_data_list)
+  mod_download_section_server("download_section_1", pool, raw_data_list)
 
 }

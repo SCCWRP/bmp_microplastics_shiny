@@ -14,7 +14,9 @@ app_ui <- function(request) {
     page_navbar(
       title = "BMP Microplastics",
       theme = bs_theme(preset = "cosmo"),
-      nav_panel(title = "Main", mod_plot_func_ui("plot_func_1" , pool))
+      nav_panel(title = "Microscopy", mod_plot_func_ui("plot_func_1")),
+      nav_panel(title = "Spectroscopy", mod_pie_plot_func_ui("pie_plot_func_1")),
+      nav_panel(title = "Download Data", mod_download_section_ui("download_section_1"))
     )
   )
 }

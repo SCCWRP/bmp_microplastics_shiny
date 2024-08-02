@@ -7,57 +7,62 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_plot_func_ui <- function(id, pool){
+mod_plot_func_ui <- function(id){
   ns <- NS(id)
 
-  pool <- pool::dbPool(
-    drv = RPostgreSQL::PostgreSQL(),
-    dbname = Sys.getenv("dbname"),
-    host = Sys.getenv("host"),
-    user = Sys.getenv("user"),
-    password = Sys.getenv("password")
+  filter_side_bar <- sidebar(
+    open = "open",
+    width = "15%",
+    title = h4('Control Panel'),
+    shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
+    shinyWidgets::pickerInput(ns("year_select"), "Select Year:", choices = NULL),
+    shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction:", choices = NULL),
+    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL)
   )
 
-  card_select <- bslib::card(
-    full_screen = TRUE,
-    card_header("Control Panel"),
-    card_body(
-      class = "fs-6",
-      selectInput(ns("bmp_select"), "Select BMP:", choices = NULL),
-      selectInput(ns("year_select"), "Select Year:", choices = NULL),
-      selectInput(ns("sizefraction_select"), "Select Size Fraction:", choices = NULL),
-      selectInput(ns("replicate_select"), "Select Replicate:", choices = NULL),
-
-      downloadButton(ns("download_constants"), "Download Constants"),
-      downloadButton(ns("download_rawall"), "Download Microscopy Raw Data"),
-      downloadButton(ns("download_rawftir"), "Download Spectroscopy Raw Data"),
-      downloadButton(ns("download_summaryall"), "Download Spectroscopy Summary Data")
-
-    )
-  )
-
-  card_plot <- bslib::card(
-    full_screen = TRUE,
-    card_header("Plots"),
-    card_body(
-      class = "fs-6",
-      shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
-      downloadButton(ns("download_summary"), "Download Summary Data for the Selected BMP and Year")
-    )
-  )
-
-
-  tagList(
-    bslib::layout_columns(
-      col_widths = c(4, 8),
-      bslib::layout_column_wrap(
-        card_select,
-        width = 1,
-        heights_equal = "row",
+  layout_sidebar(
+    sidebar = filter_side_bar,
+    layout_columns(
+      col_widths = c(6, 6),
+      bslib::card(
+        full_screen = TRUE,
+        card_header("Pie Plots"),
+        card_body(
+          class = "fs-6",
+          shinyWidgets::pickerInput(
+            ns('pie_type'),
+            choices = c('morphology','color')
+          ),
+          shinycssloaders::withSpinner( plotOutput(ns('pie_plot')), type = 5),
+          downloadButton(ns("download_summary_pie"), "Download Data for this plot")
+        )
       ),
-      card_plot
+      bslib::card(
+        full_screen = TRUE,
+        card_header("Concentration Plots"),
+        card_body(
+          class = "fs-6",
+          shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
+          downloadButton(ns("download_summary"), "Download Data for this plot")
+        )
+      )
     )
   )
+
+
+
+
+  # tagList(
+  #   bslib::layout_columns(
+  #     col_widths = c(4, 8),
+  #     bslib::layout_column_wrap(
+  #       card_select,
+  #       width = 1,
+  #       heights_equal = "row",
+  #     ),
+  #     card_plot
+  #   )
+  # )
 
 }
 
@@ -97,35 +102,31 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
 
     # Initialize BMP choices when app starts
     observe({
-      updateSelectInput(session, "bmp_select", choices = bmps())
+      shinyWidgets::updatePickerInput(session, "bmp_select", choices = bmps())
     })
 
     observeEvent(input$bmp_select, {
-      updateSelectInput(session, "year_select", choices = years())
+      shinyWidgets::updatePickerInput(session, "year_select", choices = years())
     })
 
     observeEvent(input$year_select, {
-      updateSelectInput(session, "sizefraction_select", choices = size_fraction())
+      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction())
     })
 
     observeEvent(input$sizefraction_select, {
-      updateSelectInput(session, "replicate_select", choices = replicate())
+      shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
     })
 
 
 
     # Reactive expression to load and process data
     processed_data <- reactive({
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select)
 
       selected_bmp <- input$bmp_select
       selected_year <- input$year_select
       selected_sizefraction <- input$sizefraction_select
       selected_replicate <- input$replicate_select
-
-      # print(selected_bmp)
-      # print(selected_year)
-      print(selected_replicate)
-
 
       dat <- raw_data_list$dat_rawall
       constants <- raw_data_list$constants
@@ -159,14 +160,67 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
 
       # Convert location to a factor with the custom levels
       final_result$location <- factor(final_result$location, levels = location_levels)
-
-      list(final_result = final_result, constants = constants, result = result)
-
+      list(
+        final_result = final_result,
+        constants = constants,
+        result = result,
+        original_dat = dat
+      )
 
     })
-    output$concentration_plot <- renderPlot({
-      req(input$bmp_select, input$year_select)
 
+    pieplot_dat <- reactive({
+      req(input$pie_type)
+      dat <- processed_data()$original_dat
+
+      # Group by the required columns and get the count for each group
+      plot_dat <- dat %>%
+        group_by(bmp, year, location, matrix, size_fraction, replicate, !!sym(input$pie_type)) %>%
+        summarise(count = n()) %>%
+        mutate(percentage = (count / sum(count)) * 100) %>%
+        ungroup()
+      list(
+        plot_dat = plot_dat
+      )
+    })
+
+
+    output$pie_plot <- renderPlot({
+      req(input$pie_type)
+      plot_dat <- pieplot_dat()$plot_dat
+
+      # Ensure `plot_dat` has the required columns
+      breakdowntype <- input$pie_type
+
+      location_levels <- c(
+        sort(unique(plot_dat$location[grepl("^influent", plot_dat$location)])),
+        sort(unique(plot_dat$location[grepl("^effluent", plot_dat$location)]))
+      )
+
+      # Convert location to a factor with the custom levels
+      plot_dat$location <- factor(plot_dat$location, levels = location_levels)
+
+      ggplot(plot_dat, aes(x = factor(1), y = percentage, fill = as.factor(!!sym(breakdowntype)))) +
+        geom_bar(stat = "identity", width = 1) +
+        coord_polar("y") +
+        facet_wrap(~location) +
+        geom_text(aes(label = paste0(round(percentage, 1), "%")),
+                  position = position_stack(vjust = 0.5)) +
+        theme_void() +
+        theme(
+          legend.position = "right",
+          legend.text = element_text(size = 20),
+          text = element_text(size = 24)
+        ) +
+        labs(
+          title = glue("{input$bmp_select}-Y{input$year_select}-SF{input$sizefraction_select}-Rep{input$replicate_select}"),
+          fill = breakdowntype
+        )
+
+    })
+
+
+    output$concentration_plot <- renderPlot({
       data <- processed_data()
       COLOR_PALETTE <- c(`1`="#0000FF0A", `2`="#00008B", `3` = "#FFC0CB", `4` = "#8B0000")
 
@@ -182,7 +236,7 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
                   size = 6) +
         ylim(0, y_lim) +
         scale_fill_manual(values = COLOR_PALETTE) +
-        labs(title = glue("{input$bmp_select} - Year {input$year_select} - SF {input$sizefraction_select} - Rep {input$replicate_select}"),
+        labs(title = glue("{input$bmp_select}-Y{input$year_select}-SF{input$sizefraction_select}-Rep{input$replicate_select}"),
              x = "Location",
              y = "Concentration (P/L)",
              fill = "Event") +
@@ -196,35 +250,6 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
 
     })
 
-    # Download handler for constants dataframe
-    output$download_constants <- downloadHandler(
-      filename = function() {
-        paste("constants-", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        data <- processed_data()
-        write.csv(data$constants, file, row.names = FALSE)
-      }
-    )
-
-    output$download_rawall <- downloadHandler(
-      filename = function() {
-        paste("microscopy-raw-data-", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(raw_data_list$dat_rawall, file, row.names = FALSE)
-      }
-    )
-
-    output$download_rawftir <- downloadHandler(
-      filename = function() {
-        paste("spectroscopy-raw-data-", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(raw_data_list$dat_rawftir, file, row.names = FALSE)
-      }
-    )
-
     output$download_summary <- downloadHandler(
       filename = function() {
         paste("summary-data-", Sys.Date(), ".csv", sep = "")
@@ -234,16 +259,6 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
         write.csv(data$result, file, row.names = FALSE)
       }
     )
-
-    output$download_summaryall <- downloadHandler(
-      filename = function() {
-        paste("summary-all-microscopy-", Sys.Date(), ".csv", sep = "")
-      },
-      content = function(file) {
-        write.csv(raw_data_list$dat_summaryall, file, row.names = FALSE)
-      }
-    )
-
 
   })
 }
