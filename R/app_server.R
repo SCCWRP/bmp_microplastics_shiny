@@ -33,7 +33,6 @@ app_server <- function(input, output, session) {
   dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_ftir WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
   dat_summaryall <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_summary_microscopy")
   constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
-  print(dat_summaryall)
 
   # Exclude columns that are actually present in the constants data frame
   dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols))

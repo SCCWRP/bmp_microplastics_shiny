@@ -1,0 +1,14 @@
+"","bmp","year","event","location","matrix","size_fraction","replicate","morphology","count","percentage"
+"1","OCPW","1",-88,"effluent G","stormwater",20,1,"fiber",9,30
+"2","OCPW","1",-88,"effluent G","stormwater",20,1,"film",1,3.33333333333333
+"3","OCPW","1",-88,"effluent G","stormwater",20,1,"fragment",20,66.6666666666667
+"4","OCPW","1",-88,"influent C","stormwater",20,1,"fiber",10,11.2359550561798
+"5","OCPW","1",-88,"influent C","stormwater",20,1,"fiber bundle",1,1.12359550561798
+"6","OCPW","1",-88,"influent C","stormwater",20,1,"film",13,14.6067415730337
+"7","OCPW","1",-88,"influent C","stormwater",20,1,"fragment",65,73.0337078651685
+"8","OCPW","1",1,"effluent F","stormwater",20,1,"fiber",27,3.00668151447661
+"9","OCPW","1",1,"effluent F","stormwater",20,1,"film",26,2.89532293986637
+"10","OCPW","1",1,"effluent F","stormwater",20,1,"fragment",845,94.097995545657
+"11","OCPW","1",1,"effluent G","stormwater",20,1,"fiber",9,0.61898211829436
+"12","OCPW","1",1,"effluent G","stormwater",20,1,"film",678,46.6299862448418
+"13","OCPW","1",1,"effluent G","stormwater",20,1,"fragment",767,52.7510316368638
