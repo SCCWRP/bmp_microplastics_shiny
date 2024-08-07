@@ -29,14 +29,26 @@ mod_pie_plot_func_ui <- function(id){
         card_header("Pie Plots"),
         card_body(
           class = "fs-6",
-          shinyWidgets::pickerInput(
-            ns('pie_type'),
-            choices = c('morphology','color')
-          ),
+          layout_column_wrap(
+            width = 1/2,
+            shinyWidgets::pickerInput(
+              ns('pie_type'),
+              choices = c('morphology','color')
+            ),
+            shinyWidgets::awesomeCheckbox(
+              inputId = ns("is_mp_pie"),
+              label = "Only Microplastics",
+              value = FALSE,
+              status = "danger"
+            )
+          )
+        ),
+        card_body(
+          class = "fs-6",
           shinycssloaders::withSpinner( plotOutput(ns('pie_plot')), type = 5)
         ),
         card_body(
-          downloadButton(ns("download_summary_pie"), "Download Data for this plot"),
+          downloadButton(ns("download_pie_plot_dat"), "Download plot's data"),
           fill = FALSE
         )
       ),
@@ -45,18 +57,21 @@ mod_pie_plot_func_ui <- function(id){
         card_header("Concentration Plots"),
         card_body(
           class = "fs-6",
+          shinyWidgets::awesomeCheckbox(
+            inputId = ns("is_mp_concentration"),
+            label = "Only Microplastics",
+            value = FALSE,
+            status = "danger"
+          ),
           shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
-
         ),
         card_body(
-          downloadButton(ns("download_summary"), "Download Data for this plot"),
+          downloadButton(ns("download_concentration_plot_dat"), "Download plot's data"),
           fill = FALSE
         )
       ),
     )
   )
-
-
 }
 
 #' pie_plot_func Server Functions
@@ -67,26 +82,42 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     ns <- session$ns
 
     bmps <- reactive({
-      pool::dbGetQuery(pool, 'SELECT DISTINCT bmp FROM tbl_bmp_particle_raw_ftir ORDER BY bmp')$bmp
+      get_bmp_options(
+        pool = pool,
+        tablename = 'tbl_bmp_particle_raw_ftir'
+      )
     })
 
     years <- reactive({
       req(input$bmp_select)
-      pool::dbGetQuery(pool, glue::glue("SELECT DISTINCT year FROM tbl_bmp_particle_raw_ftir WHERE bmp = '{input$bmp_select}' ORDER BY year"))$year
+      get_year_options(
+        pool = pool,
+        tablename = 'tbl_bmp_particle_raw_ftir',
+        bmpselect = input$bmp_select
+      )
     })
 
     size_fraction <- reactive({
       req(input$bmp_select, input$year_select)
-      pool::dbGetQuery(pool, glue::glue("SELECT DISTINCT size_fraction FROM tbl_bmp_particle_raw_ftir WHERE bmp = '{input$bmp_select}' AND year = '{input$year_select}' ORDER BY size_fraction"))$size_fraction
+      get_sizefraction_options(
+        pool = pool,
+        tablename = 'tbl_bmp_particle_raw_ftir',
+        bmpselect = input$bmp_select,
+        yearselect = input$year_select
+      )
     })
 
     replicate <- reactive({
       req(input$bmp_select, input$year_select, input$sizefraction_select)
-      pool::dbGetQuery(pool, glue::glue(
-        "SELECT DISTINCT replicate FROM tbl_bmp_particle_raw_ftir
-        WHERE bmp::VARCHAR = '{input$bmp_select}' AND year::VARCHAR = '{input$year_select}' AND size_fraction::VARCHAR = '{input$sizefraction_select}'
-        ORDER BY replicate"))$replicate
+      get_replicate_options(
+        pool = pool,
+        tablename = 'tbl_bmp_particle_raw_ftir',
+        bmpselect = input$bmp_select,
+        yearselect = input$year_select,
+        sizefractionselect = input$sizefraction_select
+      )
     })
+
 
     # Initialize BMP choices when app starts
     observe({
@@ -109,141 +140,81 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     # Reactive expression to load and process data
     processed_data <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select)
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type)
 
-      dat <- raw_data_list$dat_rawftir
-      constants <- raw_data_list$constants
-
-      # FILTERING
-      filtered_dat <- dat %>% filter(
-        bmp == input$bmp_select &
-          year == input$year_select &
-          size_fraction == input$sizefraction_select &
-          replicate == input$replicate_select
+      pie_plot_dat <- get_pieplot_data(
+        dat = raw_data_list$dat_rawftir,
+        constants = raw_data_list$constants,
+        bmpselect = input$bmp_select,
+        yearselect = input$year_select,
+        sizefractionselect = input$sizefraction_select,
+        replicateselect = input$replicate_select,
+        pie_type = input$pie_type,
+        is_mp = input$is_mp_pie
       )
 
-      # Left join with constants
-      concentration_dat <- filtered_dat %>%
-        group_by(bmp, year, event, location, matrix, size_fraction, replicate) %>%
-        summarize(count = n()) %>%
-        ungroup() %>%
-        left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-        arrange(bmp, year, event, location, matrix, size_fraction, replicate) %>%
-        mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
+      concentration_plot_dat <- get_concentrationplot_data(
+        dat = raw_data_list$dat_rawftir,
+        constants = raw_data_list$constants,
+        bmpselect = input$bmp_select,
+        yearselect = input$year_select,
+        sizefractionselect = input$sizefraction_select,
+        replicateselect = input$replicate_select,
+        is_mp = input$is_mp_concentration
+      )
 
       list(
-        filtered_dat = filtered_dat,
-        concentration_dat = concentration_dat
+        pie_plot_dat = pie_plot_dat,
+        concentration_plot_dat = concentration_plot_dat
       )
 
     })
 
 
     output$pie_plot <- renderPlot({
-      req(input$pie_type)
-      breakdowntype <- input$pie_type
-
-      plot_dat <- processed_data()$filtered_dat %>%
-        group_by(bmp, year, event,  location, matrix, size_fraction, replicate, !!sym(breakdowntype)) %>%
-        summarise(count = n()) %>%
-        mutate(percentage = (count / sum(count)) * 100) %>%
-        ungroup()
-
-      # Ensure `plot_dat` has the required columns
-
-      location_levels <- c(
-        sort(unique(plot_dat$location[grepl("^influent", plot_dat$location)])),
-        sort(unique(plot_dat$location[grepl("^effluent", plot_dat$location)]))
+      p <- get_pie_plot(
+        plot_dat = processed_data()$pie_plot_dat,
+        breakdowntype = input$pie_type
       )
-
-      # Convert location to a factor with the custom levels
-      plot_dat$location <- factor(plot_dat$location, levels = location_levels)
-
-      event_labeller <- function(event_val) {
-        return(paste("Event:", event_val))
-      }
-
-      ggplot(plot_dat, aes(x = factor(1), y = percentage, fill = as.factor(!!sym(breakdowntype)))) +
-        geom_bar(stat = "identity", width = 1, position = "stack") +
-        coord_polar("y") +
-        facet_grid(event ~ location, labeller = labeller(event = event_labeller), switch = "y") +
-        geom_text(aes(label = paste0(round(percentage, 1), "%")),
-                  position = position_stack(vjust = 0.5),
-                  show.legend = FALSE) +
-        theme_void() +
-        theme(
-          legend.position = "right",
-          legend.text = element_text(size = 20),
-          text = element_text(size = 24),  # Increase facet label text size
-          panel.spacing = unit(2, "lines")
-        ) +
-        labs(
-          #title = glue("{input$bmp_select}-Y{input$year_select}-SF{input$sizefraction_select}-Rep{input$replicate_select}"),
-          fill = breakdowntype
-        )
-
+      p
     })
 
 
     output$concentration_plot <- renderPlot({
-      data <- processed_data()
-
-      COLOR_PALETTE <- c(`1`="#0000FF0A", `2`="#00008B", `3` = "#FFC0CB", `4` = "#8B0000")
-
-      final_result <- data$concentration_dat %>%
-        filter(!is.na(concentration) & is.finite(concentration)) %>%
-        group_by(location, event) %>%
-        summarize(total_concentration = sum(concentration)) %>%
-        ungroup()
-
-      # Ensure the locations are in the right order
-      location_levels <- c(
-        sort(unique(final_result$location[grepl("^influent", final_result$location)])),
-        sort(unique(final_result$location[grepl("^effluent", final_result$location)]))
+      p <- get_concentration_plot(
+        plot_dat = processed_data()$concentration_plot_dat,
+        bmpselect = input$bmp_select,
+        yearselect=  input$year_select,
+        sizefractionselect = input$sizefraction_select,
+        replicateselect = input$replicate_select
       )
-
-      dodge <- position_dodge(width = 0.7)
-      y_lim <- max(final_result$total_concentration) + (max(final_result$total_concentration) * 0.1)
-
-      ggplot(final_result, aes(x = location, y = total_concentration, group = event, fill = as.factor(event))) +
-        geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black") +
-        geom_text(aes(label = round(total_concentration, 1)),
-                  position = dodge,
-                  vjust = -0.5,
-                  size = 6,
-                  show.legend = FALSE) +
-        ylim(0, y_lim) +
-        scale_fill_manual(values = COLOR_PALETTE) +
-        labs(title = glue("{input$bmp_select}-Y{input$year_select}-SF{input$sizefraction_select}-Rep{input$replicate_select}"),
-             x = "Location",
-             y = "Concentration (P/L)",
-             fill = "Event") +
-        theme_minimal() +
-        theme(
-          axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.position = "right",
-          legend.text = element_text(size = 20),
-          text = element_text(size = 30)
-        )
-
+      p
     })
 
-    output$download_summary <- downloadHandler(
+
+    output$download_pie_plot_dat <- downloadHandler(
       filename = function() {
-        paste("summary-data-", Sys.Date(), ".csv", sep = "")
+        paste("pieplot-data-", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        data <- processed_data()
-        write.csv(data$result, file, row.names = FALSE)
+        dat <- processed_data()$pie_plot_dat
+        write.csv(dat, file, row.names = FALSE)
       }
     )
+
+    output$download_concentration_plot_dat <- downloadHandler(
+      filename = function() {
+        paste("concentration-data-", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        dat <- processed_data()$concentration_plot_dat
+        write.csv(dat, file, row.names = FALSE)
+      }
+    )
+
 
 
   })
 }
 
-## To be copied in the UI
-# mod_pie_plot_func_ui("pie_plot_func_1")
 
-## To be copied in the server
-# mod_pie_plot_func_server("pie_plot_func_1")

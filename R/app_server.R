@@ -30,7 +30,7 @@ app_server <- function(input, output, session) {
   excluded_cols <- c('login_email', 'created_date', 'submissionid', 'warnings', 'last_edited_date', 'globalid', 'created_user', 'last_edited_user')
 
   dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid" )
-  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_ftir WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
+  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
   dat_summaryall <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_summary_microscopy")
   constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
 
@@ -42,8 +42,8 @@ app_server <- function(input, output, session) {
   raw_data_list <- list(
     dat_rawall = dat_rawall,
     dat_rawftir = dat_rawftir,
-    constants = constants,
-    dat_summaryall = dat_summaryall
+    dat_summaryall = dat_summaryall,
+    constants = constants
   )
 
   # Ensure the connection is closed when the app stops

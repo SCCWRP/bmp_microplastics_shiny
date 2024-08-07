@@ -12,6 +12,7 @@ Imports:
     config (>= 0.3.2),
     dplyr,
     ggplot2,
+    ggpubr,
     ggrepel,
     glue,
     golem (>= 0.4.1),
