@@ -14,7 +14,7 @@ mod_download_section_ui <- function(id){
     downloadButton(ns("download_constants"), "Download Constants"),
     downloadButton(ns("download_rawall"), "Download Microscopy Raw Data"),
     downloadButton(ns("download_rawftir"), "Download Spectroscopy Raw Data"),
-    downloadButton(ns("download_summaryall"), "Download Spectroscopy Summary Data")
+    downloadButton(ns("download_summaryall"), "Download Microscopy Summary Data")
   )
 }
 
