@@ -30,10 +30,16 @@ mod_pie_plot_func_ui <- function(id){
         card_body(
           class = "fs-6",
           layout_column_wrap(
-            width = 1/2,
+            width = 1/3,
+            shinyWidgets::pickerInput(
+              ns('event_select'),
+              label = "Event",
+              choices = NULL
+            ),
             shinyWidgets::pickerInput(
               ns('pie_type'),
-              choices = c('morphology','color')
+              label = 'Broken down by',
+              choices = c('morphology','color', 'chemicaltype')
             ),
             shinyWidgets::awesomeCheckbox(
               inputId = ns("is_mp_pie"),
@@ -45,7 +51,7 @@ mod_pie_plot_func_ui <- function(id){
         ),
         card_body(
           class = "fs-6",
-          shinycssloaders::withSpinner( plotOutput(ns('pie_plot')), type = 5)
+          shinycssloaders::withSpinner(plotOutput(ns('pie_plot')), type = 5)
         ),
         card_body(
           downloadButton(ns("download_pie_plot_dat"), "Download plot's data"),
@@ -81,18 +87,17 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
+    # Reactive expressions to get distinct values from the database
     bmps <- reactive({
       get_bmp_options(
-        pool = pool,
-        tablename = 'tbl_bmp_particle_raw_ftir'
+        dat = raw_data_list$dat_rawftir
       )
     })
 
     years <- reactive({
       req(input$bmp_select)
       get_year_options(
-        pool = pool,
-        tablename = 'tbl_bmp_particle_raw_ftir',
+        dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select
       )
     })
@@ -100,8 +105,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     size_fraction <- reactive({
       req(input$bmp_select, input$year_select)
       get_sizefraction_options(
-        pool = pool,
-        tablename = 'tbl_bmp_particle_raw_ftir',
+        dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select,
         yearselect = input$year_select
       )
@@ -110,11 +114,21 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     replicate <- reactive({
       req(input$bmp_select, input$year_select, input$sizefraction_select)
       get_replicate_options(
-        pool = pool,
-        tablename = 'tbl_bmp_particle_raw_ftir',
+        dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select
+      )
+    })
+
+    event <- reactive({
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select)
+      get_event_options(
+        dat = raw_data_list$dat_rawftir,
+        bmpselect = input$bmp_select,
+        yearselect = input$year_select,
+        sizefractionselect = input$sizefraction_select,
+        replicateselect = input$replicate_select
       )
     })
 
@@ -136,11 +150,14 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
     })
 
+    observeEvent(input$replicate_select, {
+      shinyWidgets::updatePickerInput(session, "event_select", choices = event())
+    })
 
 
     # Reactive expression to load and process data
     processed_data <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type)
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type,input$event_select)
 
       pie_plot_dat <- get_pieplot_data(
         dat = raw_data_list$dat_rawftir,
@@ -149,18 +166,19 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
         replicateselect = input$replicate_select,
+        eventselect = input$event_select,
         pie_type = input$pie_type,
         is_mp = input$is_mp_pie
       )
 
       concentration_plot_dat <- get_concentrationplot_data(
-        dat = raw_data_list$dat_rawftir,
-        constants = raw_data_list$constants,
+        raw_data_list = raw_data_list,
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
         replicateselect = input$replicate_select,
-        is_mp = input$is_mp_concentration
+        is_mp = input$is_mp_concentration,
+        spectroscopy = TRUE
       )
 
       list(
@@ -172,6 +190,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
 
     output$pie_plot <- renderPlot({
+      req(input$pie_type)
       p <- get_pie_plot(
         plot_dat = processed_data()$pie_plot_dat,
         breakdowntype = input$pie_type
