@@ -22,10 +22,11 @@ get_pie_plot <- function(plot_dat, breakdowntype){
       geom_bar(stat = "identity", width = 2) +
       coord_polar("y") +
       facet_wrap(~ location, nrow = 1) +  # Align plots horizontally
-      ggrepel::geom_label_repel(aes(label = paste0(round(percentage, 1), "%")),
+      ggrepel::geom_label_repel(aes(label = paste0(!!sym(breakdowntype), ": ", round(percentage, 1), "%")),
                        position = position_stack(vjust = 0.5),
                        show.legend = FALSE,
-                       force = 2) +
+                       force = 2,
+                       size = 5) +
       # geom_text(aes(label = paste0(round(percentage, 1), "%")),
       #           position = position_stack(vjust = 0.5),
       #           show.legend = FALSE) +
