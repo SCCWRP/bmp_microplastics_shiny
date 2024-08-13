@@ -95,6 +95,9 @@ get_concentrationplot_data <- function(
 
   if (spectroscopy){
 
+    # Calculate the percentage of is_mp in filtered_dat
+    percentage_is_mp <- nrow(filtered_dat %>% filter(is_mp == 'y')) / nrow(filtered_dat)
+
     raw_all <- raw_data_list$dat_rawall
 
     microscopy_summary <- raw_all %>%
@@ -114,7 +117,7 @@ get_concentrationplot_data <- function(
       ) %>%
       mutate(
         count = case_when(
-          is_subsample == 'y' ~ count_micro,
+          is_subsample == 'y' ~ count_micro * percentage_is_mp,
           is_subsample == 'n' ~ count_spectro,
         )
       )
