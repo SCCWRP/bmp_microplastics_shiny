@@ -29,8 +29,8 @@ get_pieplot_data <- function(
   filtered_dat <- dat %>% filter(
     bmp == bmpselect &
     year == yearselect &
-    size_fraction == sizefractionselect &
     replicate == replicateselect &
+    size_fraction %in% sizefractionselect &
     event == eventselect
   )
 
@@ -39,7 +39,7 @@ get_pieplot_data <- function(
   }
 
   plot_dat <- filtered_dat %>%
-    group_by(bmp, year, event,  location, matrix, size_fraction, replicate, !!sym(pie_type)) %>%
+    group_by(bmp, year, event,  location, matrix, replicate, !!sym(pie_type)) %>%
     summarise(count = n()) %>%
     mutate(percentage = (count / sum(count)) * 100) %>%
     ungroup()
@@ -85,8 +85,8 @@ get_concentrationplot_data <- function(
   filtered_dat <- dat %>% filter(
     bmp == bmpselect &
     year == yearselect &
-    size_fraction == sizefractionselect &
-    replicate == replicateselect
+    replicate == replicateselect &
+    size_fraction %in% sizefractionselect
   )
 
   if (is_mp){
@@ -101,12 +101,12 @@ get_concentrationplot_data <- function(
     raw_all <- raw_data_list$dat_rawall
 
     microscopy_summary <- raw_all %>%
-      group_by(bmp, year, event, location, matrix, size_fraction, replicate) %>%
+      group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       summarize(count_micro = n()) %>%
       ungroup()
 
     spectroscopy_summary <- filtered_dat %>%
-      group_by(bmp, year, event, location, matrix, size_fraction, replicate, is_subsample) %>%
+      group_by(bmp, year, event, location, matrix, replicate, size_fraction, is_subsample) %>%
       summarize(count_spectro = n()) %>%
       ungroup()
 
@@ -130,11 +130,11 @@ get_concentrationplot_data <- function(
   } else {
     # Left join with constants
     concentration_dat <- filtered_dat %>%
-      group_by(bmp, year, event, location, matrix, size_fraction, replicate) %>%
+      group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       summarize(count = n()) %>%
       ungroup() %>%
       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-      arrange(bmp, year, event, location, matrix, size_fraction, replicate) %>%
+      arrange(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
   }
 

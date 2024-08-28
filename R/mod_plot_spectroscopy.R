@@ -16,8 +16,8 @@ mod_pie_plot_func_ui <- function(id){
     title = h4('Control Panel'),
     shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
     shinyWidgets::pickerInput(ns("year_select"), "Select Year:", choices = NULL),
-    shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction:", choices = NULL),
-    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL)
+    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL),
+    shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction (can be multiple):", choices = NULL, multiple = TRUE)
   )
 
   layout_sidebar(
@@ -30,7 +30,7 @@ mod_pie_plot_func_ui <- function(id){
         card_body(
           class = "fs-6",
           layout_column_wrap(
-            width = 1/3,
+            width = 1/4,
             shinyWidgets::pickerInput(
               ns('event_select'),
               label = "Event",
@@ -39,7 +39,7 @@ mod_pie_plot_func_ui <- function(id){
             shinyWidgets::pickerInput(
               ns('pie_type'),
               label = 'Broken down by',
-              choices = c('morphology','color', 'chemicaltype')
+              choices = c('size_fraction','morphology','color', 'chemicaltype')
             ),
             shinyWidgets::awesomeCheckbox(
               inputId = ns("is_mp_pie"),
@@ -63,6 +63,7 @@ mod_pie_plot_func_ui <- function(id){
         card_header("Concentration Plots"),
         card_body(
           class = "fs-6",
+          verbatimTextOutput(ns("dynamicText")),
           shinyWidgets::awesomeCheckbox(
             inputId = ns("is_mp_concentration"),
             label = "Only Microplastics",
@@ -102,22 +103,22 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       )
     })
 
-    size_fraction <- reactive({
+    replicate <- reactive({
       req(input$bmp_select, input$year_select)
-      get_sizefraction_options(
+      get_replicate_options(
         dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select,
         yearselect = input$year_select
       )
     })
 
-    replicate <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select)
-      get_replicate_options(
+    size_fraction <- reactive({
+      req(input$bmp_select, input$year_select, input$replicate_select)
+      get_sizefraction_options(
         dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
-        sizefractionselect = input$sizefraction_select
+        replicateselect = input$year_select
       )
     })
 
@@ -132,6 +133,48 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       )
     })
 
+    # Reactive expression to gather unit information
+    unit_info <- reactive({
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$event_select)
+
+      constants <- raw_data_list$constants %>% filter(
+        bmp == input$bmp_select &
+          year == input$year_select &
+          replicate == input$replicate_select &
+          size_fraction %in% input$sizefraction_select
+      )
+
+      location_levels <- c(
+        sort(unique(constants$location[grepl("^influent", constants$location)])),
+        sort(unique(constants$location[grepl("^effluent", constants$location)]))
+      )
+
+      constants$location <- factor(constants$location, levels = location_levels)
+      constants <- constants %>%
+        arrange(location) %>%
+        distinct(location, event, unit_passing, unit)
+
+
+      formatted_text <- constants %>%
+        group_by(location) %>%
+        summarise(formatted = paste0(
+          "Unit passing for ", unique(location), ":\n",
+          paste0("Event ", `event`, ": ", unit_passing, " ", unit, collapse = "\n")
+        )) %>%
+        pull(formatted) %>%
+        paste(collapse = "\n\n")
+
+
+      # Return the formatted text as a single string
+      paste(formatted_text, collapse = "\n")
+
+    })
+
+    # Render the dynamic text output
+    output$dynamicText <- renderText({
+      # Use the reactive values in your display text
+      unit_info()
+    })
 
     # Initialize BMP choices when app starts
     observe({
@@ -143,21 +186,20 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     })
 
     observeEvent(input$year_select, {
-      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction())
-    })
-
-    observeEvent(input$sizefraction_select, {
       shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
     })
 
     observeEvent(input$replicate_select, {
+      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction(), selected = size_fraction())
+    })
+
+    observeEvent(list(input$sizefraction_select,input$replicate_select), {
       shinyWidgets::updatePickerInput(session, "event_select", choices = event())
     })
 
-
     # Reactive expression to load and process data
     processed_data <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type,input$event_select)
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type, input$event_select)
 
       pie_plot_dat <- get_pieplot_data(
         dat = raw_data_list$dat_rawftir,
@@ -180,6 +222,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         is_mp = input$is_mp_concentration,
         spectroscopy = TRUE
       )
+
 
       list(
         pie_plot_dat = pie_plot_dat,

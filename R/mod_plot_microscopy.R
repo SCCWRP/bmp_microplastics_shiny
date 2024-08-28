@@ -16,8 +16,8 @@ mod_plot_func_ui <- function(id){
     title = h4('Control Panel'),
     shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
     shinyWidgets::pickerInput(ns("year_select"), "Select Year:", choices = NULL),
-    shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction:", choices = NULL),
-    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL)
+    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL),
+    shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction (can be multiple):", choices = NULL, multiple = TRUE)
   )
 
   layout_sidebar(
@@ -110,27 +110,28 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
       )
     })
 
-    size_fraction <- reactive({
+    replicate <- reactive({
       req(input$bmp_select, input$year_select)
-      get_sizefraction_options(
+      get_replicate_options(
         dat = raw_data_list$dat_rawall,
         bmpselect = input$bmp_select,
         yearselect = input$year_select
       )
     })
 
-    replicate <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select)
-      get_replicate_options(
+    size_fraction <- reactive({
+      req(input$bmp_select, input$year_select, input$replicate_select)
+      get_sizefraction_options(
         dat = raw_data_list$dat_rawall,
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
-        sizefractionselect = input$sizefraction_select
+        replicateselect = input$year_select
       )
     })
 
     event <- reactive({
       req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select)
+
       get_event_options(
         dat = raw_data_list$dat_rawall,
         bmpselect = input$bmp_select,
@@ -139,6 +140,7 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
         replicateselect = input$replicate_select
       )
     })
+
 
     # Initialize BMP choices when app starts
     observe({
@@ -150,14 +152,14 @@ mod_plot_func_server <- function(id, pool, raw_data_list){
     })
 
     observeEvent(input$year_select, {
-      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction())
-    })
-
-    observeEvent(input$sizefraction_select, {
       shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
     })
 
     observeEvent(input$replicate_select, {
+      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction(), selected = size_fraction())
+    })
+
+    observeEvent(input$sizefraction_select, {
       shinyWidgets::updatePickerInput(session, "event_select", choices = event())
     })
 
