@@ -193,7 +193,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction(), selected = size_fraction())
     })
 
-    observeEvent(list(input$sizefraction_select,input$replicate_select), {
+    observeEvent(list(input$bmp_select, input$sizefraction_select,input$replicate_select), {
       shinyWidgets::updatePickerInput(session, "event_select", choices = event())
     })
 
