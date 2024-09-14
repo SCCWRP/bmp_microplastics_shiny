@@ -29,10 +29,11 @@ app_server <- function(input, output, session) {
 
   excluded_cols <- c('login_email', 'created_date', 'submissionid', 'warnings', 'last_edited_date', 'globalid', 'created_user', 'last_edited_user')
 
-  dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid" )
-  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir WHERE location != 'not applicable' ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
+  dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid" )
+  dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
   dat_summaryall <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_summary_microscopy")
   constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
+  blank_analysis <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_blank_analysis")
 
   # Exclude columns that are actually present in the constants data frame
   dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols))
@@ -43,7 +44,8 @@ app_server <- function(input, output, session) {
     dat_rawall = dat_rawall,
     dat_rawftir = dat_rawftir,
     dat_summaryall = dat_summaryall,
-    constants = constants
+    constants = constants,
+    blank_analysis = blank_analysis
   )
 
   # Ensure the connection is closed when the app stops
@@ -54,5 +56,5 @@ app_server <- function(input, output, session) {
   mod_plot_func_server("plot_func_1", pool, raw_data_list)
   mod_pie_plot_func_server("pie_plot_func_1", pool, raw_data_list)
   mod_download_section_server("download_section_1", pool, raw_data_list)
-
+  mod_blank_analysis_server("blank_analysis_1", pool, raw_data_list)
 }

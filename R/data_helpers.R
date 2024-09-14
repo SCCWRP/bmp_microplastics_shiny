@@ -25,6 +25,11 @@ get_pieplot_data <- function(
     is_mp = FALSE
   ){
 
+
+  if ("typeblank" %in% colnames(dat)) {
+    dat <- dat %>% filter(typeblank == 'non-blank')
+  }
+
   # FILTERING
   filtered_dat <- dat %>% filter(
     bmp == bmpselect &
@@ -74,7 +79,7 @@ get_concentrationplot_data <- function(
   ){
 
   if (spectroscopy){
-    dat <- raw_data_list$dat_rawftir
+    dat <- raw_data_list$dat_rawftir %>% filter(typeblank == 'non-blank')
   } else {
     dat <- raw_data_list$dat_rawall
   }

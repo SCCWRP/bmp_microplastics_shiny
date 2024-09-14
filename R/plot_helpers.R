@@ -27,9 +27,6 @@ get_pie_plot <- function(plot_dat, breakdowntype){
                        show.legend = FALSE,
                        force = 2,
                        size = 5) +
-      # geom_text(aes(label = paste0(round(percentage, 1), "%")),
-      #           position = position_stack(vjust = 0.5),
-      #           show.legend = FALSE) +
       theme_void() +
       theme(
         legend.position = "right",
@@ -47,34 +44,6 @@ get_pie_plot <- function(plot_dat, breakdowntype){
     final_plot <- ggplot()
   }
 
-
-  # create_plot_for_event <- function(event_data, event_name) {
-  #   ggplot(event_data, aes(x = factor(1), y = percentage, fill = as.factor(!!sym(breakdowntype)))) +
-  #     geom_bar(stat = "identity", width = 1) +
-  #     coord_polar("y") +
-  #     facet_wrap(~ location) +
-  #     geom_text(aes(label = paste0(round(percentage, 1), "%")),
-  #               position = position_stack(vjust = 0.5),
-  #               show.legend = FALSE) +
-  #     theme_void() +
-  #     theme(
-  #       legend.position = "right",
-  #       legend.text = element_text(size = 20),
-  #       text = element_text(size = 24)
-  #     ) +
-  #     labs(fill = breakdowntype, title = paste("Event:", event_name))
-  # }
-  #
-  # # Split data by event
-  # event_data_list <- split(plot_dat, plot_dat$event)
-  #
-  # # Generate plots for each event
-  # plot_list <- lapply(names(event_data_list), function(event_name) {
-  #   create_plot_for_event(event_data_list[[event_name]], event_name)
-  # })
-  #
-  # # Arrange plots in a single column using ggarrange
-  # final_plot <- ggpubr::ggarrange(plotlist = plot_list, ncol = 1, nrow = length(plot_list), align = 'v')
 
   final_plot
 

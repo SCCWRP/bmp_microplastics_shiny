@@ -118,7 +118,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         dat = raw_data_list$dat_rawftir,
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
-        replicateselect = input$year_select
+        replicateselect = input$replicate_select
       )
     })
 
@@ -185,15 +185,15 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       shinyWidgets::updatePickerInput(session, "year_select", choices = years())
     })
 
-    observeEvent(input$year_select, {
+    observeEvent(list(input$bmp_select, input$year_select), {
       shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
     })
 
-    observeEvent(input$replicate_select, {
+    observeEvent(list(input$bmp_select, input$year_select, input$replicate_select), {
       shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = size_fraction(), selected = size_fraction())
     })
 
-    observeEvent(list(input$bmp_select, input$sizefraction_select,input$replicate_select), {
+    observeEvent(list(input$bmp_select, input$sizefraction_select, input$replicate_select), {
       shinyWidgets::updatePickerInput(session, "event_select", choices = event())
     })
 
