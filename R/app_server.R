@@ -57,4 +57,6 @@ app_server <- function(input, output, session) {
   mod_pie_plot_func_server("pie_plot_func_1", pool, raw_data_list)
   mod_download_section_server("download_section_1", pool, raw_data_list)
   mod_blank_analysis_server("blank_analysis_1", pool, raw_data_list)
+
+
 }

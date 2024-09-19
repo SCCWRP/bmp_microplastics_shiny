@@ -201,6 +201,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     processed_data <- reactive({
       req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type, input$event_select)
 
+
       pie_plot_dat <- get_pieplot_data(
         dat = raw_data_list$dat_rawftir,
         constants = raw_data_list$constants,
@@ -244,7 +245,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$concentration_plot <- renderPlot({
       p <- get_concentration_plot(
-        plot_dat = processed_data()$concentration_plot_dat,
+        plot_dat = processed_data()$concentration_plot_dat$plot_dat,
         bmpselect = input$bmp_select,
         yearselect=  input$year_select,
         sizefractionselect = input$sizefraction_select,
@@ -269,7 +270,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         paste("concentration-data-", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        dat <- processed_data()$concentration_plot_dat
+        dat <- processed_data()$concentration_plot_dat$concentration_dat
         write.csv(dat, file, row.names = FALSE)
       }
     )

@@ -94,6 +94,13 @@ get_concentrationplot_data <- function(
     size_fraction %in% sizefractionselect
   )
 
+  pct_mp_dat <- filtered_dat %>%
+    group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
+    summarise(
+      percentage_is_mp = sum(is_mp == "y") / n()
+    ) %>%
+    ungroup()
+
   if (is_mp){
     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
   }
@@ -101,8 +108,6 @@ get_concentrationplot_data <- function(
   if (spectroscopy){
 
     # Calculate the percentage of is_mp in filtered_dat
-    percentage_is_mp <- nrow(filtered_dat %>% filter(is_mp == 'y')) / nrow(filtered_dat)
-
     raw_all <- raw_data_list$dat_rawall
 
     microscopy_summary <- raw_all %>%
@@ -114,6 +119,14 @@ get_concentrationplot_data <- function(
       group_by(bmp, year, event, location, matrix, replicate, size_fraction, is_subsample) %>%
       summarize(count_spectro = n()) %>%
       ungroup()
+
+    spectroscopy_summary <- spectroscopy_summary %>%
+      left_join(pct_mp_dat
+        ,
+        by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
+      )
+
+
 
     concentration_dat <- spectroscopy_summary %>%
       left_join(
@@ -129,8 +142,10 @@ get_concentrationplot_data <- function(
 
     concentration_dat <- concentration_dat %>%
       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-      mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
-
+      mutate(
+        back_calculated_particle_count = count / (pct_filter_counted * pct_sample_processed),
+        concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing)
+      )
 
   } else {
     # Left join with constants
@@ -143,14 +158,16 @@ get_concentrationplot_data <- function(
       mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
   }
 
-
-
   plot_dat <- concentration_dat %>%
     filter(!is.na(concentration) & is.finite(concentration)) %>%
     group_by(location, event) %>%
     summarize(total_concentration = sum(concentration)) %>%
     ungroup()
 
-  plot_dat
+  list(
+    plot_dat = plot_dat,
+    concentration_dat = concentration_dat
+
+  )
 
 }

@@ -15,8 +15,8 @@ app_ui <- function(request) {
       title = "BMP Microplastics",
       theme = bs_theme(preset = "cosmo"),
       nav_panel(title = "Spectroscopy", mod_pie_plot_func_ui("pie_plot_func_1")),
-      nav_panel(title = "Microscopy", mod_plot_func_ui("plot_func_1")),
-      nav_panel(title = "Blank Analysis", mod_blank_analysis_ui("blank_analysis_1")),
+      #nav_panel(title = "Microscopy", mod_plot_func_ui("plot_func_1")),
+      nav_panel(title = "MDA Analysis", mod_blank_analysis_ui("blank_analysis_1")),
       nav_panel(title = "Download Data", mod_download_section_ui("download_section_1"))
     )
   )
