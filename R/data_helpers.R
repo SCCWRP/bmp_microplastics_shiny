@@ -123,18 +123,32 @@ get_concentrationplot_data <- function(
         ,
         by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
       )
-
-    concentration_dat <- spectroscopy_summary %>%
-      left_join(
-        microscopy_summary,
-        by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")
-      ) %>%
-      mutate(
-        count = case_when(
-          is_subsample == 'y' ~ count_micro * percentage_is_mp,
-          is_subsample == 'n' ~ count_spectro,
+    if (is_mp){
+      concentration_dat <- spectroscopy_summary %>%
+        left_join(
+          microscopy_summary,
+          by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")
+        ) %>%
+        mutate(
+          count = case_when(
+            is_subsample == 'y' ~ count_micro * percentage_is_mp,
+            is_subsample == 'n' ~ count_spectro,
+          )
         )
-      )
+    } else {
+      concentration_dat <- spectroscopy_summary %>%
+        left_join(
+          microscopy_summary,
+          by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")
+        ) %>%
+        mutate(
+          count = case_when(
+            is_subsample == 'y' ~ count_micro,
+            is_subsample == 'n' ~ count_spectro,
+          )
+        )
+
+    }
 
     concentration_dat <- concentration_dat %>%
       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%

@@ -121,7 +121,7 @@ mod_download_section_server <- function(id, pool, raw_data_list){
           left_join(microscopy_summary, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
           mutate(
             count = case_when(
-              is_subsample == 'y' ~ count_micro * percentage_is_mp,
+              is_subsample == 'y' ~ count_micro,
               is_subsample == 'n' ~ count_spectro
             )
           ) %>%
