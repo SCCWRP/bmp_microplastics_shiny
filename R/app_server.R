@@ -33,7 +33,34 @@ app_server <- function(input, output, session) {
   dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
   dat_summaryall <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_summary_microscopy")
   constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
-  blank_analysis <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_blank_analysis")
+  library(glue)
+
+  mda_analysis <- pool::dbGetQuery(
+    pool,
+    glue::glue("
+        SELECT
+            samplename,
+            microplastic_particle_count,
+            particle_count_mpb,
+            particle_count_eb,
+            particle_count_fb,
+            mda,
+            CASE
+                WHEN mda IS NULL THEN NULL
+                WHEN microplastic_particle_count <= mda THEN 'ND'
+                ELSE 'D'
+            END AS result_from_sample_count,
+            CASE
+                WHEN mda IS NULL THEN NULL
+                WHEN (particle_count_eb IS NULL AND particle_count_fb IS NULL) THEN NULL
+                WHEN COALESCE(particle_count_eb, particle_count_fb) <= mda THEN 'ND'
+                ELSE 'D'
+            END AS result_from_blank
+        FROM
+            vw_bmp_mda_analysis;
+    ")
+  )
+
 
   # Exclude columns that are actually present in the constants data frame
   dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols))
@@ -45,7 +72,7 @@ app_server <- function(input, output, session) {
     dat_rawftir = dat_rawftir,
     dat_summaryall = dat_summaryall,
     constants = constants,
-    blank_analysis = blank_analysis
+    mda_analysis = mda_analysis
   )
 
   # Ensure the connection is closed when the app stops

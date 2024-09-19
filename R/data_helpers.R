@@ -86,7 +86,6 @@ get_concentrationplot_data <- function(
 
   constants <- raw_data_list$constants
 
-  # FILTERING
   filtered_dat <- dat %>% filter(
     bmp == bmpselect &
     year == yearselect &
@@ -107,7 +106,6 @@ get_concentrationplot_data <- function(
 
   if (spectroscopy){
 
-    # Calculate the percentage of is_mp in filtered_dat
     raw_all <- raw_data_list$dat_rawall
 
     microscopy_summary <- raw_all %>%
@@ -125,8 +123,6 @@ get_concentrationplot_data <- function(
         ,
         by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
       )
-
-
 
     concentration_dat <- spectroscopy_summary %>%
       left_join(
@@ -148,7 +144,7 @@ get_concentrationplot_data <- function(
       )
 
   } else {
-    # Left join with constants
+
     concentration_dat <- filtered_dat %>%
       group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       summarize(count = n()) %>%
