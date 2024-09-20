@@ -155,7 +155,11 @@ get_concentrationplot_data <- function(
       mutate(
         back_calculated_particle_count = count / (pct_filter_counted * pct_sample_processed),
         concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing)
-      )
+      ) %>%
+      select(bmp, year, event, location, matrix, replicate, size_fraction,
+             count_spectro, count_micro, is_subsample, sample_volume, sub_sample,
+             pct_sample_processed, pct_filter_counted, unit_passing, unit,
+             percentage_is_mp, back_calculated_particle_count, concentration)
 
   } else {
 
