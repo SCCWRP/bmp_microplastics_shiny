@@ -249,7 +249,8 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         bmpselect = input$bmp_select,
         yearselect=  input$year_select,
         sizefractionselect = input$sizefraction_select,
-        replicateselect = input$replicate_select
+        replicateselect = input$replicate_select,
+        is_mp = input$is_mp_concentration
       )
       p
     })
@@ -274,8 +275,6 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         write.csv(dat, file, row.names = FALSE)
       }
     )
-
-
 
   })
 }

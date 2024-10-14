@@ -170,6 +170,7 @@ get_concentrationplot_data <- function(
       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
       arrange(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
+
   }
 
   plot_dat <- concentration_dat %>%
@@ -181,7 +182,6 @@ get_concentrationplot_data <- function(
   list(
     plot_dat = plot_dat,
     concentration_dat = concentration_dat
-
   )
 
 }

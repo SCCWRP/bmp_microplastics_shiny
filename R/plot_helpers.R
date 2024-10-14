@@ -22,11 +22,11 @@ get_pie_plot <- function(plot_dat, breakdowntype){
       geom_bar(stat = "identity", width = 2) +
       coord_polar("y") +
       facet_wrap(~ location, nrow = 1) +  # Align plots horizontally
-      ggrepel::geom_label_repel(aes(label = paste0(!!sym(breakdowntype), ": ", round(percentage, 1), "%")),
-                       position = position_stack(vjust = 0.5),
-                       show.legend = FALSE,
-                       force = 2,
-                       size = 5) +
+      ggrepel::geom_label_repel(aes(label = paste0(round(percentage), "%")),
+                                position = position_stack(vjust = 0.5),
+                                show.legend = FALSE,
+                                force = 2,
+                                size = 5) +
       theme_void() +
       theme(
         legend.position = "right",
@@ -36,14 +36,20 @@ get_pie_plot <- function(plot_dat, breakdowntype){
         panel.spacing = unit(2, "lines"),  # Adjust spacing between plots
         plot.margin = margin(20, 20, 20, 20)
       ) +
-      labs(fill = breakdowntype)
+      labs(fill = breakdowntype) +
+      scale_fill_discrete(labels = function(labels) {
+        if (breakdowntype == "size_fraction") {
+          paste0(labels, "µm")
+        } else {
+          labels
+        }
+      })
 
     final_plot + theme(plot.title = element_text(hjust = 0.5, size = 32))
 
   } else {
     final_plot <- ggplot()
   }
-
 
   final_plot
 
@@ -65,8 +71,15 @@ get_pie_plot <- function(plot_dat, breakdowntype){
 #'
 #' @return A ggplot object containing the concentration bar plot.
 #' @noRd
-get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefractionselect, replicateselect){
+get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefractionselect, replicateselect, is_mp){
+
   COLOR_PALETTE <- c(`1`="#0000FF0A", `2`="#00008B", `3` = "#FFC0CB", `4` = "#8B0000")
+
+  if (is_mp) {
+    ylabel <- 'Concentration (MP/L)'
+  } else {
+    ylabel <- 'Concentration (P/L)'
+  }
 
   # Ensure the locations are in the right order
   location_levels <- c(
@@ -89,7 +102,7 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
     ylim(0, y_lim) +
     scale_fill_manual(values = COLOR_PALETTE) +
     labs(x = "Location",
-         y = "Concentration (P/L)",
+         y = ylabel,
          fill = "Event") +
     # labs(title = glue("{bmpselect}-Y{yearselect}-SF{sizefractionselect}-Rep{replicateselect}"),
     #      x = "Location",
