@@ -15,8 +15,8 @@ mod_pie_plot_func_ui <- function(id){
     width = "15%",
     title = h4('Control Panel'),
     shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
-    shinyWidgets::pickerInput(ns("year_select"), "Select Year:", choices = NULL),
-    shinyWidgets::pickerInput(ns("replicate_select"), "Select Replicate:", choices = NULL),
+    shinyWidgets::pickerInput(ns("year_select"), "Select Sampling Year:", choices = NULL),
+    shinyWidgets::pickerInput(ns("replicate_select"), "Select Lab Replicate:", choices = NULL),
     shinyWidgets::pickerInput(ns("sizefraction_select"), "Select Size Fraction (can be multiple):", choices = NULL, multiple = TRUE)
   )
 
@@ -26,7 +26,7 @@ mod_pie_plot_func_ui <- function(id){
       col_widths = c(6, 6),
       bslib::card(
         full_screen = TRUE,
-        card_header("Pie Plots"),
+        card_header("Sample Composition Plots"),
         card_body(
           class = "fs-6",
           layout_column_wrap(
@@ -158,7 +158,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       formatted_text <- constants %>%
         group_by(location) %>%
         summarise(formatted = paste0(
-          "Unit passing for ", unique(location), ":\n",
+          "Initial volume sample for ", unique(location), ":\n",
           paste0("Event ", `event`, ": ", unit_passing, " ", unit, collapse = "\n")
         )) %>%
         pull(formatted) %>%

@@ -185,3 +185,78 @@ get_concentrationplot_data <- function(
   )
 
 }
+
+
+calculate_dat_summaryall <- function(dat_rawall, constants) {
+  dat_rawall %>%
+    left_join(constants, by = c("bmp" = "bmp",
+                                "year" = "year",
+                                "event" = "event",
+                                "location" = "location",
+                                "matrix" = "matrix",
+                                "size_fraction" = "size_fraction",
+                                "replicate" = "replicate")) %>%
+    group_by(bmp, year, event, location, matrix, size_fraction, replicate) %>%
+    summarize(count = n(),
+              sample_volume = first(sample_volume),
+              sub_sample = first(sub_sample),
+              pct_filter_counted = first(pct_filter_counted),
+              pct_sample_processed = first(pct_sample_processed),
+              unit_passing = first(unit_passing),
+              concentration = count / (pct_filter_counted / 100) /
+                ((pct_sample_processed / 100) * unit_passing),
+              .groups = "drop") %>%
+    arrange(bmp, year, event, location, matrix, size_fraction, replicate)
+}
+
+
+calculate_mda_analysis <- function(dat_rawftir) {
+  # Step 1: Create mpb_counts
+  mpb_counts <- dat_rawftir %>%
+    dplyr::filter(typeblank == "MPB", predetermined_mp_yesno == "y", hqi_exceed_sixty_yesno == "y") %>%
+    dplyr::group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
+    dplyr::summarize(
+      samplename = paste(bmp, "Y", year, "E", event, location, matrix, "R", replicate, size_fraction, sep = "_"),
+      particle_count_mpb = dplyr::n(),
+      mda = (dplyr::n() + 3) + 4.65 * sqrt(dplyr::n()),
+      .groups = "drop"
+    )
+
+  # Step 2: Create crosstab_data for counts of `typeblank` values
+  crosstab_data <- dat_rawftir %>%
+    dplyr::filter(typeblank != "MPB" & typeblank != "non-blank", predetermined_mp_yesno == "y", hqi_exceed_sixty_yesno == "y") %>%
+    dplyr::group_by(bmp, year, event, location, matrix, replicate, size_fraction, typeblank) %>%
+    dplyr::summarize(particle_count = dplyr::n(), .groups = "drop") %>%
+    dplyr::mutate(samplename = paste(bmp, "Y", year, "E", event, location, matrix, "R", replicate, size_fraction, sep = "_")) %>%
+    tidyr::pivot_wider(names_from = typeblank, values_from = particle_count, values_fill = 0) %>%
+    dplyr::rename(count_eb = EB, count_fb = FB)
+
+  # Step 3: Combine mpb_counts and crosstab_data with conditional results
+  result <- dplyr::full_join(mpb_counts, crosstab_data, by = "samplename") %>%
+    dplyr::mutate(
+      bmp = stringr::str_extract(samplename, "^([^_]+)"),
+      year = stringr::str_extract(samplename, "Y([0-9]+)") %>% as.integer(),
+      event = stringr::str_extract(samplename, "E([0-9]+)") %>% as.integer(),
+      location = stringr::str_extract(samplename, "E[0-9]+_([^_]+)") %>% as.character(),
+      matrix = stringr::str_extract(samplename, "([^_]+)_R") %>% as.character(),
+      replicate = stringr::str_extract(samplename, "_R([0-9]+)") %>% as.integer(),
+      size_fraction = stringr::str_extract(samplename, "_([0-9]+)$") %>% as.integer(),
+      result = dplyr::case_when(
+        !is.na(mda) & !is.na(count_eb) & count_eb >= mda ~ "D",
+        !is.na(mda) & !is.na(count_fb) & count_fb >= mda ~ "D",
+        !is.na(mda) ~ "ND",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    dplyr::select(samplename, bmp, year, event, location, matrix, replicate, size_fraction, particle_count_mpb, count_eb, count_fb, mda, result) %>%
+    dplyr::arrange(samplename)
+
+  return(result)
+}
+
+# Usage:
+# result_data <- process_blank_analysis(dat_rawftir)
+
+
+
+
