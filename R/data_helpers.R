@@ -81,7 +81,7 @@ get_concentrationplot_data <- function(
   if (spectroscopy){
     dat <- raw_data_list$dat_rawftir %>% filter(typeblank == 'non-blank')
   } else {
-    dat <- raw_data_list$dat_rawall
+    dat <- raw_data_list$dat_rawall %>% filter(typeblank == 'non-blank')
   }
 
   constants <- raw_data_list$constants
@@ -96,9 +96,12 @@ get_concentrationplot_data <- function(
   pct_mp_dat <- filtered_dat %>%
     group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
     summarise(
+      total = n(),
       percentage_is_mp = sum(is_mp == "y") / n()
     ) %>%
     ungroup()
+
+
 
   if (is_mp){
     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
@@ -106,7 +109,7 @@ get_concentrationplot_data <- function(
 
   if (spectroscopy){
 
-    raw_all <- raw_data_list$dat_rawall
+    raw_all <- raw_data_list$dat_rawall %>% filter(typeblank == 'non-blank')
 
     microscopy_summary <- raw_all %>%
       group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
