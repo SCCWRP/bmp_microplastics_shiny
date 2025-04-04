@@ -14,6 +14,7 @@ mod_pie_plot_func_ui <- function(id){
     open = "open",
     width = "15%",
     title = h4('Control Panel'),
+    shinyWidgets::pickerInput(ns("matrix_select"), "Select Matrix:", choices = c('media','stormwater'), selected = 'stormwater'),
     shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
     shinyWidgets::pickerInput(ns("year_select"), "Select Sampling Year:", choices = NULL),
     shinyWidgets::pickerInput(ns("replicate_select"), "Select Lab Replicate:", choices = NULL),
@@ -31,7 +32,7 @@ mod_pie_plot_func_ui <- function(id){
       row_heights = c(3, 1),
       bslib::card(
         height = '1000px',
-        full_screen = TRUE,
+        full_screen = FALSE,
         card_header(
           "Sample Composition Plots",
           layout_column_wrap(
@@ -96,10 +97,20 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
+
+    matrix_options <- reactive({
+      # Replace 'matrix_column' with the actual column name to use
+      unique(raw_data_list$dat_rawftir$matrix)
+    })
+
     # Reactive expressions to get distinct values from the database
     bmps <- reactive({
+      req(input$matrix_select)
+      print("trigger")
+      print(input$matrix_select)
       get_bmp_options(
-        dat = raw_data_list$dat_rawftir
+        dat = raw_data_list$dat_rawftir,
+        matrixselect = input$matrix_select
       )
     })
 
@@ -183,6 +194,10 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     # Initialize BMP choices when app starts
     observe({
+      shinyWidgets::updatePickerInput(session, "matrix_select", choices = matrix_options())
+    })
+
+    observeEvent(input$matrix_select, {
       shinyWidgets::updatePickerInput(session, "bmp_select", choices = bmps())
     })
 
@@ -204,12 +219,13 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     # Reactive expression to load and process data
     processed_data <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type)
-
+      req(input$matrix_select, input$bmp_select, input$year_select,
+          input$sizefraction_select, input$replicate_select, input$pie_type)
 
       pie_plot_dat <- get_pieplot_data(
         dat = raw_data_list$dat_rawftir,
         constants = raw_data_list$constants,
+        matrixselect = input$matrix_select,  # New parameter
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
@@ -220,6 +236,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
       concentration_plot_dat <- get_concentrationplot_data(
         raw_data_list = raw_data_list,
+        matrixselect = input$matrix_select,  # New parameter
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
@@ -228,13 +245,12 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         spectroscopy = TRUE
       )
 
-
       list(
         pie_plot_dat = pie_plot_dat,
         concentration_plot_dat = concentration_plot_dat
       )
-
     })
+
 
 
     output$pie_plot <- renderPlot({

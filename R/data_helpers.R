@@ -16,6 +16,7 @@
 get_pieplot_data <- function(
     dat,
     constants,
+    matrixselect,         # New parameter
     bmpselect,
     yearselect,
     sizefractionselect,
@@ -27,9 +28,10 @@ get_pieplot_data <- function(
     dat <- dat %>% filter(typeblank == 'non-blank')
   }
 
-  # FILTERING: Remove event filtering to allow faceting by event later.
+  # Add matrix filtering along with the other filters
   filtered_dat <- dat %>% filter(
-    bmp == bmpselect &
+    matrix == matrixselect &      # New filtering condition
+      bmp == bmpselect &
       year == yearselect &
       replicate == replicateselect &
       size_fraction %in% sizefractionselect
@@ -39,17 +41,16 @@ get_pieplot_data <- function(
     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
   }
 
-  # First group by the breakdown variable along with the key grouping variables,
-  # then group by the parent grouping (event and location, plus other identifiers)
-  # to calculate percentages that sum to 100% within each event/location.
   plot_dat <- filtered_dat %>%
     group_by(bmp, year, matrix, replicate, event, location, !!sym(pie_type)) %>%
     summarise(count = n(), .groups = "drop") %>%
     group_by(bmp, year, matrix, replicate, event, location) %>%
     mutate(percentage = (count / sum(count)) * 100) %>%
     ungroup()
+
   plot_dat
 }
+
 
 
 
@@ -70,14 +71,14 @@ get_pieplot_data <- function(
 #' @noRd
 get_concentrationplot_data <- function(
     raw_data_list,
+    matrixselect,         # New parameter
     bmpselect,
     yearselect,
     sizefractionselect,
     replicateselect,
     is_mp = FALSE,
     spectroscopy = FALSE
-  ){
-
+){
   if (spectroscopy){
     dat <- raw_data_list$dat_rawftir %>% filter(typeblank == 'non-blank')
   } else {
@@ -86,11 +87,13 @@ get_concentrationplot_data <- function(
 
   constants <- raw_data_list$constants
 
+  # Filter with the new matrix selection included
   filtered_dat <- dat %>% filter(
-    bmp == bmpselect &
-    year == yearselect &
-    replicate == replicateselect &
-    size_fraction %in% sizefractionselect
+    matrix == matrixselect &     # New filtering condition
+      bmp == bmpselect &
+      year == yearselect &
+      replicate == replicateselect &
+      size_fraction %in% sizefractionselect
   )
 
   pct_mp_dat <- filtered_dat %>%
@@ -100,8 +103,6 @@ get_concentrationplot_data <- function(
       percentage_is_mp = sum(is_mp == "y") / n()
     ) %>%
     ungroup()
-
-
 
   if (is_mp){
     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
@@ -122,9 +123,8 @@ get_concentrationplot_data <- function(
       ungroup()
 
     spectroscopy_summary <- spectroscopy_summary %>%
-      left_join(pct_mp_dat
-        ,
-        by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
+      left_join(pct_mp_dat,
+                by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
       )
     if (is_mp){
       concentration_dat <- spectroscopy_summary %>%
@@ -135,7 +135,7 @@ get_concentrationplot_data <- function(
         mutate(
           count = case_when(
             is_subsample == 'y' ~ count_micro * percentage_is_mp,
-            is_subsample == 'n' ~ count_spectro,
+            is_subsample == 'n' ~ count_spectro
           )
         )
     } else {
@@ -147,10 +147,9 @@ get_concentrationplot_data <- function(
         mutate(
           count = case_when(
             is_subsample == 'y' ~ count_micro,
-            is_subsample == 'n' ~ count_spectro,
+            is_subsample == 'n' ~ count_spectro
           )
         )
-
     }
 
     concentration_dat <- concentration_dat %>%
@@ -173,7 +172,6 @@ get_concentrationplot_data <- function(
       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
       arrange(bmp, year, event, location, matrix, replicate, size_fraction) %>%
       mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
-
   }
 
   plot_dat <- concentration_dat %>%
@@ -186,8 +184,8 @@ get_concentrationplot_data <- function(
     plot_dat = plot_dat,
     concentration_dat = concentration_dat
   )
-
 }
+
 
 
 calculate_dat_summaryall <- function(dat_rawall, constants) {

@@ -1,11 +1,14 @@
-get_bmp_options <- function(dat){
-
+get_bmp_options <- function(dat, matrixselect = 'stormwater'){
+  print("inside bmp")
+  print(matrixselect)
   if ("typeblank" %in% colnames(dat)) {
     dat <- dat %>% filter(typeblank == 'non-blank')
   }
+  # Filter the data based on the selected 'bmp'
+  filtered_data <- dat[dat$matrix == matrixselect, ]
 
-  # Return unique values of 'bmp' from 'dat' ordered by 'bmp'
-  return(sort(unique(dat$bmp)))
+  # Return the unique years from the filtered data
+  return(sort(unique(filtered_data$bmp)))
 }
 
 
