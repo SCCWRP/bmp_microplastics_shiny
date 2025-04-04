@@ -28,44 +28,38 @@ mod_pie_plot_func_ui <- function(id){
       padding = 0,
       gap = 0,
       col_widths = 12,
-      row_heights = c(2, 1),
+      row_heights = c(3, 1),
       bslib::card(
-        height = '600px',
+        height = '1000px',
         full_screen = TRUE,
-        card_header("Sample Composition Plots"),
-        card_body(
-          layout_columns(
+        card_header(
+          "Sample Composition Plots",
+          layout_column_wrap(
+            width = 1/2,
+            fillable = TRUE,
             full_screen = FALSE,
-            gap = 0,
-            fillable = FALSE,
-            col_widths = 12,
-            row_heights = c(2, 1),
-            layout_column_wrap(
-              width = 1/2,
-              full_screen = FALSE,
-              # shinyWidgets::pickerInput(
-              #   ns('event_select'),
-              #   label = "Event",
-              #   choices = NULL
-              # ),
-              shinyWidgets::pickerInput(
-                ns('pie_type'),
-                label = 'Broken down by',
-                choices = c('size_fraction','morphology','color', 'chemicaltype')
-              ),
-              shinyWidgets::awesomeCheckbox(
-                inputId = ns("is_mp_pie"),
-                label = "Only Microplastics",
-                value = FALSE,
-                status = "danger"
-              )
+            shinyWidgets::pickerInput(
+              ns('pie_type'),
+              choices = c('size_fraction','morphology','color', 'chemicaltype')
             ),
-            shinycssloaders::withSpinner(plotOutput(ns('pie_plot')), type = 5)
+            shinyWidgets::awesomeCheckbox(
+              inputId = ns("is_mp_pie"),
+              label = "Only Microplastics",
+              value = FALSE,
+              status = "danger"
+            )
           )
         ),
+        card_body(
+            fill = TRUE,
+            fillable = TRUE,
+            padding = 0,
+            gap = 0,
+            shinycssloaders::withSpinner(plotOutput(ns('pie_plot'), height="800px"), type = 5)
+        ),
         card_footer(
-          downloadButton(ns("download_pie_plot_dat"), "Download plot's data"),
-          fill = FALSE
+          downloadButton(ns("download_pie_plot_dat"), "Download Data"),
+          downloadButton(ns("download_pie_plot"), "Download Plot"),
         )
       ),
       bslib::card(
@@ -73,6 +67,7 @@ mod_pie_plot_func_ui <- function(id){
         full_screen = TRUE,
         card_header("Concentration Plots"),
         card_body(
+          fillable = FALSE,
           class = "fs-6",
           shinyWidgets::awesomeCheckbox(
             inputId = ns("is_mp_concentration"),
@@ -83,10 +78,12 @@ mod_pie_plot_func_ui <- function(id){
           shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
           DT::DTOutput(ns("dynamicTable"))
         ),
-        card_body(
-          downloadButton(ns("download_concentration_plot_dat"), "Download plot's data"),
+        card_footer(
+          downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
+          downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
           fill = FALSE
         )
+
       ),
     )
   )
@@ -174,6 +171,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     output$dynamicTable <- DT::renderDT({
       DT::datatable(
         unit_info(),
+        colnames = c("Event", "Location", "Sample Volume", 'Subsample Volume', 'Unit'),  # Replace with your desired names
         rownames = FALSE,
         options = list(
           dom = 't',
@@ -279,6 +277,46 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       content = function(file) {
         dat <- processed_data()$concentration_plot_dat$concentration_dat
         write.csv(dat, file, row.names = FALSE)
+      }
+    )
+
+    output$download_pie_plot <- downloadHandler(
+      filename = function() {
+        paste("pie-plot-", Sys.Date(), ".png", sep = "")
+      },
+      content = function(file) {
+        plot_obj <- get_stacked_bar_plot(
+          plot_dat = processed_data()$pie_plot_dat,
+          breakdowntype = input$pie_type
+        )
+        ggsave(file, plot = plot_obj + theme_light() + theme(
+          strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 10),
+          axis.title.y = element_text(size = 14),
+          plot.title = element_text(size = 18)
+        ), width = 16, height = 8, dpi = 300, units = "in")
+      }
+    )
+
+    output$download_concentration_plot <- downloadHandler(
+      filename = function() {
+        paste("concentration-plot-", Sys.Date(), ".png", sep = "")
+      },
+      content = function(file) {
+        plot_obj <- get_concentration_plot(
+          plot_dat = processed_data()$concentration_plot_dat$plot_dat,
+          bmpselect = input$bmp_select,
+          yearselect = input$year_select,
+          sizefractionselect = input$sizefraction_select,
+          replicateselect = input$replicate_select,
+          is_mp = input$is_mp_concentration
+        )
+        ggsave(file, plot = plot_obj  + theme_light() + theme(
+          strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 10),
+          axis.title.y = element_text(size = 14),
+          plot.title = element_text(size = 18)
+        ), width = 16, height = 8, dpi = 300, units = "in")
       }
     )
 

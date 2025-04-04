@@ -7,7 +7,7 @@
 
 app_server <- function(input, output, session) {
 
-  ggplot2::theme_set(ggplot2::theme_bw(base_size = 22))
+  ggplot2::theme_set(ggplot2::theme_bw(base_size = 24))
   thematic::thematic_shiny(font = "auto")
 
   credentials <- data.frame(
