@@ -61,15 +61,11 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype){
 #'
 #' @return A ggplot object containing the concentration bar plot.
 #' @noRd
-get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefractionselect, replicateselect, is_mp){
+get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefractionselect, replicateselect){
 
   COLOR_PALETTE <- c(`1`="#0000FF0A", `2`="#00008B", `3` = "#FFC0CB", `4` = "#8B0000")
 
-  if (is_mp) {
-    ylabel <- 'Concentration (MP/L)'
-  } else {
-    ylabel <- 'Concentration (P/L)'
-  }
+  ylabel <- 'Concentration (MP/L)'
 
   # Ensure the locations are in the right order
   location_levels <- c(

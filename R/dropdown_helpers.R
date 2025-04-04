@@ -1,6 +1,4 @@
 get_bmp_options <- function(dat, matrixselect = 'stormwater'){
-  print("inside bmp")
-  print(matrixselect)
   if ("typeblank" %in% colnames(dat)) {
     dat <- dat %>% filter(typeblank == 'non-blank')
   }

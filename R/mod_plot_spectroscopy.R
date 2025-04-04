@@ -23,70 +23,92 @@ mod_pie_plot_func_ui <- function(id){
 
   layout_sidebar(
     sidebar = filter_side_bar,
-    layout_columns(
-      fillable = FALSE,
-      fill = TRUE,
-      padding = 0,
-      gap = 0,
-      col_widths = 12,
-      row_heights = c(3, 1),
-      bslib::card(
-        height = '1000px',
-        full_screen = FALSE,
-        card_header(
-          "Sample Composition Plots",
-          layout_column_wrap(
-            width = 1/2,
-            fillable = TRUE,
-            full_screen = FALSE,
-            shinyWidgets::pickerInput(
-              ns('pie_type'),
-              choices = c('size_fraction','morphology','color', 'chemicaltype')
-            ),
-            shinyWidgets::awesomeCheckbox(
-              inputId = ns("is_mp_pie"),
-              label = "Only Microplastics",
-              value = FALSE,
-              status = "danger"
-            )
-          )
-        ),
-        card_body(
-            fill = TRUE,
-            fillable = TRUE,
-            padding = 0,
-            gap = 0,
-            shinycssloaders::withSpinner(plotOutput(ns('pie_plot'), height="800px"), type = 5)
-        ),
-        card_footer(
-          downloadButton(ns("download_pie_plot_dat"), "Download Data"),
-          downloadButton(ns("download_pie_plot"), "Download Plot"),
-        )
-      ),
-      bslib::card(
-        fillable = FALSE,
-        full_screen = TRUE,
-        card_header("Concentration Plots"),
-        card_body(
+    bslib::navset_card_underline(
+      id = ns("main_infiltration"),
+      bslib::nav_panel(
+        title = "Instruction",
+        layout_columns(
           fillable = FALSE,
-          class = "fs-6",
-          shinyWidgets::awesomeCheckbox(
-            inputId = ns("is_mp_concentration"),
-            label = "Only Microplastics",
-            value = FALSE,
-            status = "danger"
+          fill = TRUE,
+          padding = 0,
+          gap = 0,
+          col_widths = 12,
+          row_heights = c(3, 1),
+          bslib::card(
+            height = '1000px',
+            full_screen = FALSE,
+            card_header(
+              "Sample Composition Plots",
+              layout_column_wrap(
+                width = 1/2,
+                fillable = TRUE,
+                full_screen = FALSE,
+                shinyWidgets::pickerInput(
+                  ns('pie_type'),
+                  choices = c('size_fraction','morphology','color', 'chemicaltype')
+                ),
+                shinyWidgets::awesomeCheckbox(
+                  inputId = ns("is_mp_pie"),
+                  label = "Only Microplastics",
+                  value = FALSE,
+                  status = "danger"
+                )
+              )
+            ),
+            card_body(
+              fill = TRUE,
+              fillable = TRUE,
+              padding = 0,
+              gap = 0,
+              shinycssloaders::withSpinner(plotOutput(ns('pie_plot'), height="800px"), type = 5)
+            ),
+            card_footer(
+              downloadButton(ns("download_pie_plot_dat"), "Download Data"),
+              downloadButton(ns("download_pie_plot"), "Download Plot"),
+            )
           ),
-          shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
-          DT::DTOutput(ns("dynamicTable"))
-        ),
-        card_footer(
-          downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
-          downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
-          fill = FALSE
-        )
+          bslib::card(
+            fillable = FALSE,
+            full_screen = TRUE,
+            card_header("Microplastics Concentration Plots"),
+            card_body(
+              fillable = FALSE,
+              class = "fs-6",
+              # shinyWidgets::awesomeCheckbox(
+              #   inputId = ns("is_mp_concentration"),
+              #   label = "Only Microplastics",
+              #   value = FALSE,
+              #   status = "danger"
+              # ),
+              shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
+              DT::DTOutput(ns("dynamicTable"))
+            ),
+            card_footer(
+              downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
+              downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
+              fill = FALSE
+            )
 
+          ),
+        )
       ),
+      bslib::nav_panel(
+        title = "Method",
+        h3("Microplastics Concentration Calculation"),
+        tags$ul(
+          tags$li("Extracts spectroscopy and microscopy data along with constants."),
+          tags$li("Groups and summarizes the microscopy and spectroscopy data to count particles."),
+          tags$li("Calculates the percentage of microplastic particles using:"),
+          tags$li(HTML("<strong>percentage_is_mp = (# of MP particles) / (total # of spectroscopy particles)</strong>")),
+          tags$li("Joins summaries and constants to compute an adjusted particle count and concentration.")
+        ),
+        p("Key formulas used include:"),
+        p(HTML("<strong>Subsample adjustment:</strong> count = {count_micro * percentage_is_mp (if subsample) or count_spectro (if not subsample)")),
+        p(HTML("<strong>Back-calculated particle count:</strong> count / (pct_filter_counted * pct_sample_processed)")),
+        p(HTML("<strong>Concentration:</strong> (count / pct_filter_counted) / (pct_sample_processed * unit_passing)"))
+      )
     )
+
   )
 }
 
@@ -97,17 +119,10 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
-
-    matrix_options <- reactive({
-      # Replace 'matrix_column' with the actual column name to use
-      unique(raw_data_list$dat_rawftir$matrix)
-    })
-
     # Reactive expressions to get distinct values from the database
     bmps <- reactive({
       req(input$matrix_select)
-      print("trigger")
-      print(input$matrix_select)
+
       get_bmp_options(
         dat = raw_data_list$dat_rawftir,
         matrixselect = input$matrix_select
@@ -192,13 +207,12 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       )
     })
 
-    # Initialize BMP choices when app starts
-    observe({
-      shinyWidgets::updatePickerInput(session, "matrix_select", choices = matrix_options())
-    })
-
     observeEvent(input$matrix_select, {
       shinyWidgets::updatePickerInput(session, "bmp_select", choices = bmps())
+      shinyWidgets::updatePickerInput(session, "year_select", choices = NULL, selected = NULL)
+      shinyWidgets::updatePickerInput(session, "replicate_select", choices = NULL, selected = NULL)
+      shinyWidgets::updatePickerInput(session, "sizefraction_select", choices = NULL, selected = NULL)
+      shinyWidgets::updatePickerInput(session, "event_select", choices = NULL, selected = NULL)
     })
 
     observeEvent(input$bmp_select, {
@@ -240,9 +254,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         bmpselect = input$bmp_select,
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
-        replicateselect = input$replicate_select,
-        is_mp = input$is_mp_concentration,
-        spectroscopy = TRUE
+        replicateselect = input$replicate_select
       )
 
       list(
@@ -269,8 +281,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         bmpselect = input$bmp_select,
         yearselect=  input$year_select,
         sizefractionselect = input$sizefraction_select,
-        replicateselect = input$replicate_select,
-        is_mp = input$is_mp_concentration
+        replicateselect = input$replicate_select
       )
       p
     })
@@ -324,8 +335,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
           bmpselect = input$bmp_select,
           yearselect = input$year_select,
           sizefractionselect = input$sizefraction_select,
-          replicateselect = input$replicate_select,
-          is_mp = input$is_mp_concentration
+          replicateselect = input$replicate_select
         )
         ggsave(file, plot = plot_obj  + theme_light() + theme(
           strip.text = element_text(size = 14),
