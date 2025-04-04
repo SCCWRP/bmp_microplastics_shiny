@@ -7,55 +7,45 @@
 #'
 #' @return A ggplot object containing the arranged pie plots for each event.
 #' @noRd
-get_pie_plot <- function(plot_dat, breakdowntype){
+get_stacked_bar_plot <- function(plot_dat, breakdowntype){
 
+  # Set custom levels for location
   location_levels <- c(
     sort(unique(plot_dat$location[grepl("^influent", plot_dat$location)])),
     sort(unique(plot_dat$location[grepl("^effluent", plot_dat$location)]))
   )
-
-  # Convert location to a factor with the custom levels
   plot_dat$location <- factor(plot_dat$location, levels = location_levels)
 
+  # Create a dedicated factor column for the breakdown variable.
+  plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
+
+  library(dplyr)
+  # Summarize for custom legend labels (without numeric values)
+  legend_summary <- plot_dat %>%
+    group_by(category) %>%
+    summarise(dummy = 1, .groups = 'drop')
+
+  if(breakdowntype == "size_fraction"){
+    legend_labels <- paste0(as.character(legend_summary$category), "µm")
+  } else {
+    legend_labels <- as.character(legend_summary$category)
+  }
+  names(legend_labels) <- legend_summary$category
+
   if (nrow(plot_dat) > 0) {
-    final_plot <- ggplot(plot_dat, aes(x = factor(1), y = percentage, fill = as.factor(!!sym(breakdowntype)))) +
-      geom_bar(stat = "identity", width = 2) +
-      coord_polar("y") +
-      facet_wrap(~ location, nrow = 1) +  # Align plots horizontally
-      ggrepel::geom_label_repel(aes(label = paste0(round(percentage), "%")),
-                                position = position_stack(vjust = 0.5),
-                                show.legend = FALSE,
-                                force = 2,
-                                size = 5) +
-      theme_void() +
-      theme(
-        legend.position = "right",
-        legend.text = element_text(size = 20),
-        text = element_text(size = 24),
-        strip.text = element_text(size = 24),
-        panel.spacing = unit(2, "lines"),  # Adjust spacing between plots
-        plot.margin = margin(20, 20, 20, 20)
-      ) +
+    final_plot <- ggplot(plot_dat, aes(x = location, y = percentage, fill = category)) +
+      geom_bar(stat = "identity") +
+      facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x))) +
       labs(fill = breakdowntype) +
-      scale_fill_discrete(labels = function(labels) {
-        if (breakdowntype == "size_fraction") {
-          paste0(labels, "µm")
-        } else {
-          labels
-        }
-      })
-
-    final_plot + theme(plot.title = element_text(hjust = 0.5, size = 32))
-
+      scale_fill_discrete(labels = legend_labels) +
+      scale_y_continuous(breaks = seq(0, 100, by = 10))
+    final_plot
   } else {
     final_plot <- ggplot()
   }
 
   final_plot
-
 }
-
-
 
 
 
@@ -103,18 +93,7 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
     scale_fill_manual(values = COLOR_PALETTE) +
     labs(x = "Location",
          y = ylabel,
-         fill = "Event") +
-    # labs(title = glue("{bmpselect}-Y{yearselect}-SF{sizefractionselect}-Rep{replicateselect}"),
-    #      x = "Location",
-    #      y = "Concentration (P/L)",
-    #      fill = "Event") +
-    theme_minimal() +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      legend.position = "right",
-      legend.text = element_text(size = 20),
-      text = element_text(size = 30)
-    )
+         fill = "Event")
   p
 
 }

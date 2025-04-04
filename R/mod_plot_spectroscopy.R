@@ -23,47 +23,57 @@ mod_pie_plot_func_ui <- function(id){
   layout_sidebar(
     sidebar = filter_side_bar,
     layout_columns(
-      col_widths = c(6, 6),
+      fillable = FALSE,
+      fill = TRUE,
+      padding = 0,
+      gap = 0,
+      col_widths = 12,
+      row_heights = c(2, 1),
       bslib::card(
+        height = '600px',
         full_screen = TRUE,
         card_header("Sample Composition Plots"),
         card_body(
-          class = "fs-6",
-          layout_column_wrap(
-            width = 1/4,
-            shinyWidgets::pickerInput(
-              ns('event_select'),
-              label = "Event",
-              choices = NULL
+          layout_columns(
+            full_screen = FALSE,
+            gap = 0,
+            fillable = FALSE,
+            col_widths = 12,
+            row_heights = c(2, 1),
+            layout_column_wrap(
+              width = 1/2,
+              full_screen = FALSE,
+              # shinyWidgets::pickerInput(
+              #   ns('event_select'),
+              #   label = "Event",
+              #   choices = NULL
+              # ),
+              shinyWidgets::pickerInput(
+                ns('pie_type'),
+                label = 'Broken down by',
+                choices = c('size_fraction','morphology','color', 'chemicaltype')
+              ),
+              shinyWidgets::awesomeCheckbox(
+                inputId = ns("is_mp_pie"),
+                label = "Only Microplastics",
+                value = FALSE,
+                status = "danger"
+              )
             ),
-            shinyWidgets::pickerInput(
-              ns('pie_type'),
-              label = 'Broken down by',
-              choices = c('size_fraction','morphology','color', 'chemicaltype')
-            ),
-            shinyWidgets::awesomeCheckbox(
-              inputId = ns("is_mp_pie"),
-              label = "Only Microplastics",
-              value = FALSE,
-              status = "danger"
-            )
+            shinycssloaders::withSpinner(plotOutput(ns('pie_plot')), type = 5)
           )
         ),
-        card_body(
-          class = "fs-6",
-          shinycssloaders::withSpinner(plotOutput(ns('pie_plot')), type = 5)
-        ),
-        card_body(
+        card_footer(
           downloadButton(ns("download_pie_plot_dat"), "Download plot's data"),
           fill = FALSE
         )
       ),
       bslib::card(
+        fillable = FALSE,
         full_screen = TRUE,
         card_header("Concentration Plots"),
         card_body(
           class = "fs-6",
-          verbatimTextOutput(ns("dynamicText")),
           shinyWidgets::awesomeCheckbox(
             inputId = ns("is_mp_concentration"),
             label = "Only Microplastics",
@@ -71,6 +81,7 @@ mod_pie_plot_func_ui <- function(id){
             status = "danger"
           ),
           shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
+          DT::DTOutput(ns("dynamicTable"))
         ),
         card_body(
           downloadButton(ns("download_concentration_plot_dat"), "Download plot's data"),
@@ -135,7 +146,8 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     # Reactive expression to gather unit information
     unit_info <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$event_select)
+      req(input$bmp_select, input$year_select, input$sizefraction_select,
+          input$replicate_select)
 
       constants <- raw_data_list$constants %>% filter(
         bmp == input$bmp_select &
@@ -149,31 +161,26 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         sort(unique(constants$location[grepl("^effluent", constants$location)]))
       )
 
+      # Set location as a factor with the custom levels
       constants$location <- factor(constants$location, levels = location_levels)
+
+      # Arrange and select only the required columns
       constants <- constants %>%
         arrange(location) %>%
-        distinct(location, event, unit_passing, unit)
-
-
-      formatted_text <- constants %>%
-        group_by(location) %>%
-        summarise(formatted = paste0(
-          "Initial volume sample for ", unique(location), ":\n",
-          paste0("Event ", `event`, ": ", unit_passing, " ", unit, collapse = "\n")
-        )) %>%
-        pull(formatted) %>%
-        paste(collapse = "\n\n")
-
-
-      # Return the formatted text as a single string
-      paste(formatted_text, collapse = "\n")
-
+        distinct(event, location, sample_volume, sub_sample, unit)
+      constants
     })
 
-    # Render the dynamic text output
-    output$dynamicText <- renderText({
-      # Use the reactive values in your display text
-      unit_info()
+    output$dynamicTable <- DT::renderDT({
+      DT::datatable(
+        unit_info(),
+        rownames = FALSE,
+        options = list(
+          dom = 't',
+          paging = FALSE,
+          ordering = FALSE
+        )
+      )
     })
 
     # Initialize BMP choices when app starts
@@ -199,7 +206,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     # Reactive expression to load and process data
     processed_data <- reactive({
-      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type, input$event_select)
+      req(input$bmp_select, input$year_select, input$sizefraction_select, input$replicate_select, input$pie_type)
 
 
       pie_plot_dat <- get_pieplot_data(
@@ -209,7 +216,6 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         yearselect = input$year_select,
         sizefractionselect = input$sizefraction_select,
         replicateselect = input$replicate_select,
-        eventselect = input$event_select,
         pie_type = input$pie_type,
         is_mp = input$is_mp_pie
       )
@@ -235,7 +241,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$pie_plot <- renderPlot({
       req(input$pie_type)
-      p <- get_pie_plot(
+      p <- get_stacked_bar_plot (
         plot_dat = processed_data()$pie_plot_dat,
         breakdowntype = input$pie_type
       )

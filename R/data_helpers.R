@@ -20,38 +20,40 @@ get_pieplot_data <- function(
     yearselect,
     sizefractionselect,
     replicateselect,
-    eventselect,
     pie_type,
     is_mp = FALSE
-  ){
-
-
+){
   if ("typeblank" %in% colnames(dat)) {
     dat <- dat %>% filter(typeblank == 'non-blank')
   }
 
-  # FILTERING
+  # FILTERING: Remove event filtering to allow faceting by event later.
   filtered_dat <- dat %>% filter(
     bmp == bmpselect &
-    year == yearselect &
-    replicate == replicateselect &
-    size_fraction %in% sizefractionselect &
-    event == eventselect
+      year == yearselect &
+      replicate == replicateselect &
+      size_fraction %in% sizefractionselect
   )
 
   if (is_mp){
     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
   }
 
+  # First group by the breakdown variable along with the key grouping variables,
+  # then group by the parent grouping (event and location, plus other identifiers)
+  # to calculate percentages that sum to 100% within each event/location.
   plot_dat <- filtered_dat %>%
-    group_by(bmp, year, event,  location, matrix, replicate, !!sym(pie_type)) %>%
-    summarise(count = n()) %>%
+    group_by(bmp, year, matrix, replicate, event, location, !!sym(pie_type)) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    group_by(bmp, year, matrix, replicate, event, location) %>%
     mutate(percentage = (count / sum(count)) * 100) %>%
     ungroup()
 
+  write.csv(plot_dat, 'plot_dat.csv')
   plot_dat
-
 }
+
+
 
 
 #' Get Concentration Plot Data
