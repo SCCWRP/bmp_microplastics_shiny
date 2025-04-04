@@ -48,8 +48,6 @@ get_pieplot_data <- function(
     group_by(bmp, year, matrix, replicate, event, location) %>%
     mutate(percentage = (count / sum(count)) * 100) %>%
     ungroup()
-
-  write.csv(plot_dat, 'plot_dat.csv')
   plot_dat
 }
 
