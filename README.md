@@ -3,17 +3,17 @@
 This document explains the methodology used to calculate microplastic concentrations by integrating spectroscopy and microscopy data.
 
 ## Data Extraction and Grouping
-
-1. **Spectroscopy Data (`rawftir`):**  
+1. **Spectroscopy Data:**  
    - **Grouping:** Data are grouped by the following variables:  
      `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
    - **Count Calculation:**  
      Count the total number of particles for each group, which we denote as `count_spectro`.
    - **Microplastic Proportion:**  
-     For each group, calculate the fraction of microplastic particles as:  
-     $$\text{percentage\_mp} = \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}}$$
+     For each group, calculate the fraction of microplastic particles as:
 
-2. **Microscopy Data (`rawall`):**  
+$$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+
+2. **Microscopy Data:**  
    - **Grouping:** Data are grouped by the same parameters:  
      `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
    - **Count Calculation:**  
@@ -24,49 +24,52 @@ This document explains the methodology used to calculate microplastic concentrat
      `count_spectro`, `count_micro`, and `percentage_mp`.
    - Additionally, merge these results with the constants dataset, which provides:  
      `sample_volume`, `sub_sample`, `pct_sample_processed`, `pct_filter_counted`, and `unit_passing`.
-   - **Note:** Ensure that the column `is_subsample` (from `rawftir`) is also included in the merged dataset.
+   - **No
 
 ## Calculations
 
 For each group, perform the following computations:
 
 1. **Back-Calculated Particle Count:**  
-   Determine the particle count adjusted by the processing percentages. Use either the microscopy or spectroscopy count depending on the `is_subsample` flag:
+   The particle count is adjusted using the processing percentages. Depending on the sample type:
    
-   - **If the sample is a subsample** (`is_subsample = 'y'`):
-     $$
-     \text{back\_calculated\_particle\_count} = \frac{\text{count\_micro}}{\text{pct\_filter\_counted} \times \text{pct\_sample\_processed}}
-     $$
-   - **If the sample is not a subsample** (`is_subsample = 'n'`):
-     $$
-     \text{back\_calculated\_particle\_count} = \frac{\text{count\_spectro}}{\text{pct\_filter\_counted} \times \text{pct\_sample\_processed}}
-     $$
+   - **If the sample is a subsample**:
+     
+   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
 
-2. **Microplastic Particle Count:**  
-   Adjust the particle count to obtain the microplastic-specific count:
-   $$
-   \text{back\_calculated\_mp\_particle\_count} = \text{back\_calculated\_particle\_count} \times \text{percentage\_mp}
-   $$
+   - **If the sample is not a subsample** :
+  
+   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+   
+3. **Microplastic Particle Count:**  
+   The microplastic-specific count is calculated by applying the microplastic fraction:
+   
+   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
 
-3. **Concentration Calculation:**  
-   Normalize the calculated counts by the sample's unit passing to obtain the concentration.
+5. **Concentration Calculation:**  
+   Finally, the concentrations are computed by normalizing the counts by the passing unit:
    
    - **Overall Particle Concentration:**
-     $$
-     \text{concentration\_all} = \frac{\text{back\_calculated\_particle\_count}}{\text{unit\_passing}}
-     $$
-   - **Microplastic Particle Concentration:**
-     $$
-     \text{concentration\_mp} = \frac{\text{back\_calculated\_mp\_particle\_count}}{\text{unit\_passing}}
-     $$
 
-## Final Output
+  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
 
-The final output is a dataframe containing, for each group defined by:
-- **Grouping Variables:** `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`
-- **Counts:** `count_spectro` and `count_micro`
-- **Computed Metrics:** `percentage_mp`, `back_calculated_particle_count`, and `back_calculated_mp_particle_count`
-- **Concentration Values:** `concentration_all` and `concentration_mp`
-- **Additional Constants:** `sample_volume`, `sub_sample`, `pct_sample_processed`, `pct_filter_counted`, `unit_passing`
+5. **Concentration Calculation:**  
+   Finally, the concentrations are computed by normalizing the counts by the passing unit:
+   
+   - **Overall Particle Concentration:**
 
-This complete set of computations forms the basis for further analysis and visualization of microplastic contamination.
+  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+
+5. **Concentration Calculation:**  
+   Finally, the concentrations are computed by normalizing the counts by the passing unit:
+   
+   - **Overall Particle Concentration:**
+
+  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+  
+
+  
+
+
+
+
