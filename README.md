@@ -11,9 +11,7 @@ This document explains the methodology used to calculate microplastic concentrat
      Count the total number of particles for each group, which we denote as `count_spectro`.
    - **Microplastic Proportion:**  
      For each group, calculate the fraction of microplastic particles as:  
-     $$
-     \text{percentage\_mp} = \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}}
-     $$
+     $$\text{percentage\_mp} = \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}}$$
 
 2. **Microscopy Data (`rawall`):**  
    - **Grouping:** Data are grouped by the same parameters:  
