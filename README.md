@@ -11,7 +11,7 @@ This document explains the methodology used to calculate microplastic concentrat
    - **Microplastic Proportion:**  
      For each group, calculate the fraction of microplastic particles as:
 
-$$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+$$  \text{Percentage of Microplastics Particle} =  \frac{\text{Number of MP particles}}{\text{Total Number of Spectroscopy Particles}} $$
 
 2. **Microscopy Data:**  
    - **Grouping:** Data are grouped by the same parameters:  
@@ -19,56 +19,37 @@ $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total n
    - **Count Calculation:**  
      Count the total number of particles for each group, denoted as `count_micro`.
 
-3. **Merging Data:**  
-   - Merge the summaries from the spectroscopy and microscopy datasets so that each group has the values:  
-     `count_spectro`, `count_micro`, and `percentage_mp`.
-   - Additionally, merge these results with the constants dataset, which provides:  
-     `sample_volume`, `sub_sample`, `pct_sample_processed`, `pct_filter_counted`, and `unit_passing`.
-   - **No
-
 ## Calculations
 
 For each group, perform the following computations:
 
-1. **Back-Calculated Particle Count:**  
+**Back-Calculated Particle Count:**  
    The particle count is adjusted using the processing percentages. Depending on the sample type:
    
-   - **If the sample is a subsample**:
-     
-   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+**If the sample is a subsample**:
 
-   - **If the sample is not a subsample** :
-  
-   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
-   
-3. **Microplastic Particle Count:**  
+$$  \text{Back Calculated Particle Count} =  \frac{\text{Number of Microscopy Particles}}{\text{Percent Filter Counted} \ \times \ \text{Sample Processed}} $$
+
+**If the sample is not a subsample**:
+
+$$  \text{Back Calculated Particle Count} =  \frac{\text{Number of Specstrocopy Particles}}{\text{Percent Filter Counted} \ \times \ \text{Sample Processed}} $$
+
+**Back-Calculated Microplastics Particle Count:**   
    The microplastic-specific count is calculated by applying the microplastic fraction:
-   
-   $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
 
-5. **Concentration Calculation:**  
+$$  \text{Back Calculated MP Particle Count} = \text{Back Calculated Particle Count} \ \times \ \text{Percentage of Microplastics Particle}  $$
+
+**Concentration Calculation:**  
    Finally, the concentrations are computed by normalizing the counts by the passing unit:
-   
-   - **Overall Particle Concentration:**
 
-  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+**All Particle Concentration**:
 
-5. **Concentration Calculation:**  
-   Finally, the concentrations are computed by normalizing the counts by the passing unit:
-   
-   - **Overall Particle Concentration:**
+$$  \text{Concentration} = \frac{\text{Back Calculated Particle Count}}{\text{Unit Passing}} $$
 
-  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
+**Microplastics Particle Concentration**:
 
-5. **Concentration Calculation:**  
-   Finally, the concentrations are computed by normalizing the counts by the passing unit:
-   
-   - **Overall Particle Concentration:**
+$$  \text{Concentration} = \frac{\text{Back Calculated MP Particle Count}}{\text{Unit Passing}} $$
 
-  $$  \text{percentage}_{mp} =  \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}} $$
-  
-
-  
 
 
 
