@@ -58,22 +58,18 @@ mod_download_section_server <- function(id, pool, raw_data_list){
       },
       content = function(file) {
 
-        all_spectroscopy_summary <- get_concentration() %>%
-          select(bmp, year, event, location, matrix, replicate, size_fraction,
-                 count_spectro, count_micro, is_subsample, sample_volume, sub_sample,
-                 pct_sample_processed, pct_filter_counted, unit_passing, unit,
-                 percentage_is_mp, back_calculated_particle_count, concentration)
+        all_spectroscopy_summary <- get_concentration(raw_data_list)
 
         # Create a new Excel workbook
         wb <- openxlsx::createWorkbook()
 
         # Add "All Particles Summary" sheet
-        openxlsx::addWorksheet(wb, "All Particles Summary")
-        openxlsx::writeData(wb, "All Particles Summary", all_spectroscopy_summary)
+        openxlsx::addWorksheet(wb, "Analysis")
+        openxlsx::writeData(wb, "Analysis", all_spectroscopy_summary)
 
-        # Add "MP Particles Summary" sheet
-        openxlsx::addWorksheet(wb, "MP Particles Summary")
-        openxlsx::writeData(wb, "MP Particles Summary", mp_spectroscopy_summary)
+        # # Add "MP Particles Summary" sheet
+        # openxlsx::addWorksheet(wb, "MP Particles Summary")
+        # openxlsx::writeData(wb, "MP Particles Summary", mp_spectroscopy_summary)
 
         # Save the workbook to the file path
         openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
