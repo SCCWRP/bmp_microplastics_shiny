@@ -28,8 +28,14 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype){
     legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
 
     # Create color palette from light to dark blue
-    blue_palette <- colorRampPalette(c("#cce5ff", "#004080"))(length(size_levels))
-
+    #blue_palette <- colorRampPalette(c("#e6f0ff", "#0000FF"))(length(size_levels))
+    blue_palette <- c(
+      "20"  = "#cce5ff",
+      "63"  = "#66b2ff",
+      "125" = "#3399FF",
+      "355" = "#0066CC",
+      "500" = "#0000FF"
+    )
     fill_scale <- scale_fill_manual(
       values = setNames(blue_palette, size_levels),
       labels = legend_labels
@@ -93,11 +99,11 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
 
   if(is_mp){
     # When is_mp is TRUE:
-    # 1. Plot total_concentration with a lighter appearance (using alpha = 0.5)
+    # 1. Plot total_concentration with a lighter appearance (using alpha = 0.3)
     # 2. Overlay total_concentration_mp with full color but remove its legend mapping.
     p <- ggplot(plot_dat, aes(x = location, group = event)) +
       geom_bar(aes(y = total_concentration, fill = as.factor(event)),
-               stat = "identity", position = dodge, width = 0.5, color = "black", alpha = 0.5) +
+               stat = "identity", position = dodge, width = 0.5, color = "black", alpha = 0.3) +
       geom_bar(aes(y = total_concentration_mp, fill = as.factor(event)),
                stat = "identity", position = dodge, width = 0.5, color = "black", show.legend = FALSE) +
       geom_text(aes(label = round(total_concentration, 1), y = total_concentration),
@@ -105,19 +111,19 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
       ylim(0, y_lim) +
       scale_fill_manual(values = COLOR_PALETTE) +
       # Force the legend items to display the lighter appearance
-      guides(fill = guide_legend(override.aes = list(alpha = 0.5))) +
+      guides(fill = guide_legend(override.aes = list(alpha = 0.3))) +
       labs(x = "Location",
            y = ylabel,
            fill = "Event")
   } else {
     # When is_mp is FALSE: plot only total_concentration with lighter appearance.
     p <- ggplot(plot_dat, aes(x = location, y = total_concentration, group = event, fill = as.factor(event))) +
-      geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black", alpha = 0.5) +
+      geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black", alpha = 0.3) +
       geom_text(aes(label = round(total_concentration, 1)),
                 position = dodge, vjust = -0.5, size = 6, show.legend = FALSE) +
       ylim(0, y_lim) +
       scale_fill_manual(values = COLOR_PALETTE) +
-      guides(fill = guide_legend(override.aes = list(alpha = 0.5))) +
+      guides(fill = guide_legend(override.aes = list(alpha = 0.3))) +
       labs(x = "Location",
            y = ylabel,
            fill = "Event")

@@ -129,7 +129,6 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
       # Return the rendered UI content
       card_content
-      print(card_content)
     })
 
     # Reactive expressions to get distinct values from the database
