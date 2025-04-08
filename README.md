@@ -1,54 +1,74 @@
+# Microplastics Concentration Calculation
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+This document explains the methodology used to calculate microplastic concentrations by integrating spectroscopy and microscopy data.
 
-# bmpmicroplasticsshiny
+## Data Extraction and Grouping
 
-<!-- badges: start -->
-<!-- badges: end -->
+1. **Spectroscopy Data (`rawftir`):**  
+   - **Grouping:** Data are grouped by the following variables:  
+     `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
+   - **Count Calculation:**  
+     Count the total number of particles for each group, which we denote as `count_spectro`.
+   - **Microplastic Proportion:**  
+     For each group, calculate the fraction of microplastic particles as:  
+     $$
+     \text{percentage\_mp} = \frac{\text{Number of MP particles}}{\text{Total number of spectroscopy particles}}
+     $$
 
-The goal of bmpmicroplasticsshiny is to …
+2. **Microscopy Data (`rawall`):**  
+   - **Grouping:** Data are grouped by the same parameters:  
+     `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
+   - **Count Calculation:**  
+     Count the total number of particles for each group, denoted as `count_micro`.
 
-## Installation
+3. **Merging Data:**  
+   - Merge the summaries from the spectroscopy and microscopy datasets so that each group has the values:  
+     `count_spectro`, `count_micro`, and `percentage_mp`.
+   - Additionally, merge these results with the constants dataset, which provides:  
+     `sample_volume`, `sub_sample`, `pct_sample_processed`, `pct_filter_counted`, and `unit_passing`.
+   - **Note:** Ensure that the column `is_subsample` (from `rawftir`) is also included in the merged dataset.
 
-You can install the development version of bmpmicroplasticsshiny like
-so:
+## Calculations
 
-``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
-```
+For each group, perform the following computations:
 
-## Example
+1. **Back-Calculated Particle Count:**  
+   Determine the particle count adjusted by the processing percentages. Use either the microscopy or spectroscopy count depending on the `is_subsample` flag:
+   
+   - **If the sample is a subsample** (`is_subsample = 'y'`):
+     $$
+     \text{back\_calculated\_particle\_count} = \frac{\text{count\_micro}}{\text{pct\_filter\_counted} \times \text{pct\_sample\_processed}}
+     $$
+   - **If the sample is not a subsample** (`is_subsample = 'n'`):
+     $$
+     \text{back\_calculated\_particle\_count} = \frac{\text{count\_spectro}}{\text{pct\_filter\_counted} \times \text{pct\_sample\_processed}}
+     $$
 
-This is a basic example which shows you how to solve a common problem:
+2. **Microplastic Particle Count:**  
+   Adjust the particle count to obtain the microplastic-specific count:
+   $$
+   \text{back\_calculated\_mp\_particle\_count} = \text{back\_calculated\_particle\_count} \times \text{percentage\_mp}
+   $$
 
-``` r
-library(bmpmicroplasticsshiny)
-## basic example code
-```
+3. **Concentration Calculation:**  
+   Normalize the calculated counts by the sample's unit passing to obtain the concentration.
+   
+   - **Overall Particle Concentration:**
+     $$
+     \text{concentration\_all} = \frac{\text{back\_calculated\_particle\_count}}{\text{unit\_passing}}
+     $$
+   - **Microplastic Particle Concentration:**
+     $$
+     \text{concentration\_mp} = \frac{\text{back\_calculated\_mp\_particle\_count}}{\text{unit\_passing}}
+     $$
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+## Final Output
 
-``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
-```
+The final output is a dataframe containing, for each group defined by:
+- **Grouping Variables:** `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`
+- **Counts:** `count_spectro` and `count_micro`
+- **Computed Metrics:** `percentage_mp`, `back_calculated_particle_count`, and `back_calculated_mp_particle_count`
+- **Concentration Values:** `concentration_all` and `concentration_mp`
+- **Additional Constants:** `sample_volume`, `sub_sample`, `pct_sample_processed`, `pct_filter_counted`, `unit_passing`
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this. You could also
-use GitHub Actions to re-render `README.Rmd` every time you push. An
-example workflow can be found here:
-<https://github.com/r-lib/actions/tree/v1/examples>.
-
-You can also embed plots, for example:
-
-<img src="man/figures/README-pressure-1.png" width="100%" />
-
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+This complete set of computations forms the basis for further analysis and visualization of microplastic contamination.

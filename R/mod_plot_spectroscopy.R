@@ -22,6 +22,7 @@ mod_pie_plot_func_ui <- function(id){
   )
 
   layout_sidebar(
+    withMathJax(),
     sidebar = filter_side_bar,
     bslib::navset_card_underline(
       id = ns("main_infiltration"),
@@ -33,7 +34,30 @@ mod_pie_plot_func_ui <- function(id){
           padding = 0,
           gap = 0,
           col_widths = 12,
-          row_heights = c(3, 1),
+          row_heights = c(1, 3),
+          bslib::card(
+            fillable = FALSE,
+            full_screen = TRUE,
+            card_header("Concentration Plots"),
+            card_body(
+              fillable = FALSE,
+              class = "fs-6",
+              shinyWidgets::awesomeCheckbox(
+                inputId = ns("is_mp_concentration"),
+                label = "Show Microplastics Concentration",
+                value = FALSE,
+                status = "danger"
+              ),
+              shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
+              DT::DTOutput(ns("dynamicTable"))
+            ),
+            card_footer(
+              downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
+              downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
+              fill = FALSE
+            )
+
+          ),
           bslib::card(
             height = '1000px',
             full_screen = FALSE,
@@ -66,49 +90,20 @@ mod_pie_plot_func_ui <- function(id){
               downloadButton(ns("download_pie_plot_dat"), "Download Data"),
               downloadButton(ns("download_pie_plot"), "Download Plot"),
             )
-          ),
-          bslib::card(
-            fillable = FALSE,
-            full_screen = TRUE,
-            card_header("Microplastics Concentration Plots"),
-            card_body(
-              fillable = FALSE,
-              class = "fs-6",
-              # shinyWidgets::awesomeCheckbox(
-              #   inputId = ns("is_mp_concentration"),
-              #   label = "Only Microplastics",
-              #   value = FALSE,
-              #   status = "danger"
-              # ),
-              shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
-              DT::DTOutput(ns("dynamicTable"))
-            ),
-            card_footer(
-              downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
-              downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
-              fill = FALSE
-            )
-
-          ),
+          )
         )
       ),
+      # Create the "Method" tab with MathJax-enabled content
       bslib::nav_panel(
         title = "Method",
         h3("Microplastics Concentration Calculation"),
-        tags$ul(
-          tags$li("Extracts spectroscopy and microscopy data along with constants."),
-          tags$li("Groups and summarizes the microscopy and spectroscopy data to count particles."),
-          tags$li("Calculates the percentage of microplastic particles using:"),
-          tags$li(HTML("<strong>percentage_is_mp = (# of MP particles) / (total # of spectroscopy particles)</strong>")),
-          tags$li("Joins summaries and constants to compute an adjusted particle count and concentration.")
-        ),
-        p("Key formulas used include:"),
-        p(HTML("<strong>Subsample adjustment:</strong> count = {count_micro * percentage_is_mp (if subsample) or count_spectro (if not subsample)")),
-        p(HTML("<strong>Back-calculated particle count:</strong> count / (pct_filter_counted * pct_sample_processed)")),
-        p(HTML("<strong>Concentration:</strong> (count / pct_filter_counted) / (pct_sample_processed * unit_passing)"))
+        bslib::card(
+          bslib::card_body(
+            uiOutput(ns("method_ui"))
+          )
+        )
       )
     )
-
   )
 }
 
@@ -118,6 +113,24 @@ mod_pie_plot_func_ui <- function(id){
 mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+
+    output$method_ui <- renderUI({
+      # Replace with your actual URL to the Markdown file
+      url <- "https://raw.githubusercontent.com/SCCWRP/bmp_microplastics_shiny/refs/heads/master/README.md"
+
+      # Retrieve the Markdown text from the URL
+      markdown_text <- httr::GET(url) |>
+        httr::content(as = "text", encoding = "UTF-8")
+
+      # Convert the Markdown text to HTML and wrap with withMathJax() for LaTeX support
+      card_content <- withMathJax(
+        HTML(commonmark::markdown_html(markdown_text))
+      )
+
+      # Return the rendered UI content
+      card_content
+      print(card_content)
+    })
 
     # Reactive expressions to get distinct values from the database
     bmps <- reactive({
@@ -263,8 +276,6 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       )
     })
 
-
-
     output$pie_plot <- renderPlot({
       req(input$pie_type)
       p <- get_stacked_bar_plot (
@@ -281,7 +292,8 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         bmpselect = input$bmp_select,
         yearselect=  input$year_select,
         sizefractionselect = input$sizefraction_select,
-        replicateselect = input$replicate_select
+        replicateselect = input$replicate_select,
+        is_mp = input$is_mp_concentration
       )
       p
     })

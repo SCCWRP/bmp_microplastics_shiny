@@ -75,7 +75,7 @@ get_concentrationplot_data <- function(
     replicateselect
 ){
   concentration_dat <- get_concentration(raw_data_list) %>% filter(
-    matrix == matrixselect &     # New filtering condition
+    matrix == matrixselect &
       bmp == bmpselect &
       year == yearselect &
       replicate == replicateselect &
@@ -84,121 +84,28 @@ get_concentrationplot_data <- function(
     select(bmp, year, event, location, matrix, replicate, size_fraction,
            count_spectro, count_micro, is_subsample, sample_volume, sub_sample,
            pct_sample_processed, pct_filter_counted, unit_passing, unit,
-           percentage_is_mp, back_calculated_particle_count, concentration)
+           percentage_mp,
+           back_calculated_particle_count, back_calculated_mp_particle_count,
+           concentration_all,
+           concentration_mp)
 
   plot_dat <- concentration_dat %>%
-    filter(!is.na(concentration) & is.finite(concentration)) %>%
+    filter(
+      !is.na(concentration_all) & is.finite(concentration_all) &
+        !is.na(concentration_mp)  & is.finite(concentration_mp)
+    ) %>%
     group_by(location, event) %>%
-    summarize(total_concentration = sum(concentration)) %>%
+    summarize(
+      total_concentration = sum(concentration_all),
+      total_concentration_mp = sum(concentration_mp)
+    ) %>%
     ungroup()
-
-  # if (spectroscopy){
-  #   dat <- raw_data_list$dat_rawftir %>% filter(typeblank == 'non-blank')
-  # } else {
-  #   dat <- raw_data_list$dat_rawall %>% filter(typeblank == 'non-blank')
-  # }
-
-
-#
-#   constants <- raw_data_list$constants
-#
-#   # Filter with the new matrix selection included
-#   filtered_dat <- dat %>% filter(
-#     matrix == matrixselect &     # New filtering condition
-#       bmp == bmpselect &
-#       year == yearselect &
-#       replicate == replicateselect &
-#       size_fraction %in% sizefractionselect
-#   )
-#
-#   pct_mp_dat <- filtered_dat %>%
-#     group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
-#     summarise(
-#       total = n(),
-#       percentage_is_mp = sum(is_mp == "y") / n()
-#     ) %>%
-#     ungroup()
-#
-#   if (is_mp){
-#     filtered_dat <- filtered_dat %>% filter(is_mp == 'y')
-#   }
-#
-#   if (spectroscopy){
-#
-#     raw_all <- raw_data_list$dat_rawall %>% filter(typeblank == 'non-blank')
-#
-#     microscopy_summary <- raw_all %>%
-#       group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
-#       summarize(count_micro = n()) %>%
-#       ungroup()
-#
-#     spectroscopy_summary <- filtered_dat %>%
-#       group_by(bmp, year, event, location, matrix, replicate, size_fraction, is_subsample) %>%
-#       summarize(count_spectro = n()) %>%
-#       ungroup()
-#
-#     spectroscopy_summary <- spectroscopy_summary %>%
-#       left_join(pct_mp_dat,
-#                 by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
-#       )
-#     if (is_mp){
-#       concentration_dat <- spectroscopy_summary %>%
-#         left_join(
-#           microscopy_summary,
-#           by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")
-#         ) %>%
-#         mutate(
-#           count = case_when(
-#             is_subsample == 'y' ~ count_micro * percentage_is_mp,
-#             is_subsample == 'n' ~ count_spectro
-#           )
-#         )
-#     } else {
-#       concentration_dat <- spectroscopy_summary %>%
-#         left_join(
-#           microscopy_summary,
-#           by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")
-#         ) %>%
-#         mutate(
-#           count = case_when(
-#             is_subsample == 'y' ~ count_micro,
-#             is_subsample == 'n' ~ count_spectro
-#           )
-#         )
-#     }
-#
-#     concentration_dat <- concentration_dat %>%
-#       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-#       mutate(
-#         back_calculated_particle_count = count / (pct_filter_counted * pct_sample_processed),
-#         concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing)
-#       ) %>%
-#       select(bmp, year, event, location, matrix, replicate, size_fraction,
-#              count_spectro, count_micro, is_subsample, sample_volume, sub_sample,
-#              pct_sample_processed, pct_filter_counted, unit_passing, unit,
-#              percentage_is_mp, back_calculated_particle_count, concentration)
-#
-#   } else {
-#
-#     concentration_dat <- filtered_dat %>%
-#       group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
-#       summarize(count = n()) %>%
-#       ungroup() %>%
-#       left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-#       arrange(bmp, year, event, location, matrix, replicate, size_fraction) %>%
-#       mutate(concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing))
-#   }
-#
-#   plot_dat <- concentration_dat %>%
-#     filter(!is.na(concentration) & is.finite(concentration)) %>%
-#     group_by(location, event) %>%
-#     summarize(total_concentration = sum(concentration)) %>%
-#     ungroup()
 
   list(
     plot_dat = plot_dat,
     concentration_dat = concentration_dat
   )
+
 }
 
 
@@ -271,80 +178,57 @@ calculate_mda_analysis <- function(dat_rawftir) {
 }
 
 get_concentration <- function(raw_data_list){
-  # Load data from raw_data_list
+  # Load required package
+  library(dplyr)
+
+  # Unpack the list elements
   rawftir <- raw_data_list$dat_rawftir
   rawall <- raw_data_list$dat_rawall
   constants <- raw_data_list$constants
 
-  # Filtered for 'is_mp == y' (MP particles)
-  filtered_mp <- rawftir %>% filter(is_mp == 'y')
-
-  # Unfiltered for 'is_mp == n' or other (all particles)
-  unfiltered <- rawftir
-
-  # Calculate microscopy summary
-  microscopy_summary <- rawall %>%
-    group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
-    summarize(count_micro = n()) %>%
-    ungroup()
-
-  # Case 1: Spectroscopy summary for MP particles
-  mp_spectroscopy_summary <- filtered_mp %>%
-    group_by(bmp, year, event, location, matrix, replicate, size_fraction, is_subsample) %>%
-    summarize(count_spectro = n()) %>%
-    ungroup()
-
-  # Case 2: Spectroscopy summary for all particles
-  all_spectroscopy_summary <- unfiltered %>%
-    group_by(bmp, year, event, location, matrix, replicate, size_fraction, is_subsample) %>%
-    summarize(count_spectro = n()) %>%
-    ungroup()
-
-  # Calculate percentage of MP in each case
-  pct_mp_dat <- unfiltered %>%
+  # Summarize FTIR (spectroscopy) data
+  ftir_summary <- rawftir %>%
     group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
     summarise(
-      percentage_is_mp = sum(is_mp == "y") / n()
-    ) %>%
-    ungroup()
-
-  # Join with MP particles summary
-  mp_spectroscopy_summary <- mp_spectroscopy_summary %>%
-    left_join(pct_mp_dat, by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")) %>%
-    left_join(microscopy_summary, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-    mutate(
-      count = case_when(
-        is_subsample == 'y' ~ count_micro * percentage_is_mp,
-        is_subsample == 'n' ~ count_spectro
-      )
-    ) %>%
-    left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-    mutate(
-      back_calculated_particle_count = count / (pct_filter_counted * pct_sample_processed),
-      concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing)
-    ) %>%
-    select(bmp, year, event, location, matrix, replicate, size_fraction,
-           count_spectro, count_micro, is_subsample, sample_volume, sub_sample,
-           pct_sample_processed, pct_filter_counted, unit_passing, unit,
-           percentage_is_mp, back_calculated_particle_count, concentration)
-
-  # Join with all particles summary
-  all_spectroscopy_summary <- all_spectroscopy_summary %>%
-    left_join(pct_mp_dat, by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")) %>%
-    left_join(microscopy_summary, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-    mutate(
-      count = case_when(
-        is_subsample == 'y' ~ count_micro,
-        is_subsample == 'n' ~ count_spectro
-      )
-    ) %>%
-    left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "size_fraction", "replicate")) %>%
-    mutate(
-      back_calculated_particle_count = count / (pct_filter_counted * pct_sample_processed),
-      concentration = (count / pct_filter_counted) / (pct_sample_processed * unit_passing)
+      count_spectro = n(),
+      # Calculate the proportion of particles that are 'mp' (assumes is_mp is 'y' for mp and 'n' otherwise)
+      percentage_mp = sum(is_mp == "y") / n(),
+      # Assuming is_subsample is constant for each group, take the first occurrence.
+      is_subsample = first(is_subsample),
+      .groups = "drop"
     )
 
-  all_spectroscopy_summary
+  # Summarize Microscopy data
+  micro_summary <- rawall %>%
+    group_by(bmp, year, event, location, matrix, replicate, size_fraction) %>%
+    summarise(
+      count_micro = n(),
+      .groups = "drop"
+    )
+
+  # Merge the summaries from FTIR and Microscopy
+  merged_data <- ftir_summary %>%
+    left_join(micro_summary, by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction"))
+
+  # Merge with the constants data (assumes constants has matching grouping keys)
+  merged_data <- merged_data %>%
+    left_join(constants, by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction"))
+
+  # Calculate back_calculated counts and final concentrations
+  out <- merged_data %>%
+    mutate(
+      back_calculated_particle_count = if_else(
+        is_subsample == "y",
+        count_micro / (pct_filter_counted * pct_sample_processed),
+        count_spectro / (pct_filter_counted * pct_sample_processed)
+      ),
+      back_calculated_mp_particle_count = back_calculated_particle_count * percentage_mp,
+      concentration_all = back_calculated_particle_count / unit_passing,
+      concentration_mp = back_calculated_mp_particle_count / unit_passing
+    )
+
+  # Output the resulting dataframe with the calculated fields
+  return(out)
 
 }
 
