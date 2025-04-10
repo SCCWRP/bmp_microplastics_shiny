@@ -11,6 +11,7 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     # Your application UI logic
     shinyjs::useShinyjs(),
+    useBusyIndicators(),
     page_navbar(
       title = "BMP Microplastics",
       theme = bs_theme(preset = "cosmo"),

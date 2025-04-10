@@ -27,7 +27,7 @@ mod_pie_plot_func_ui <- function(id){
     bslib::navset_card_underline(
       id = ns("main_infiltration"),
       bslib::nav_panel(
-        title = "Instruction",
+        title = "Result",
         layout_columns(
           fillable = FALSE,
           fill = TRUE,
@@ -38,17 +38,14 @@ mod_pie_plot_func_ui <- function(id){
           bslib::card(
             fillable = FALSE,
             full_screen = TRUE,
-            card_header("Concentration Plots"),
+            card_header(
+              "Concentration Plots",
+            ),
             card_body(
               fillable = FALSE,
               class = "fs-6",
-              shinyWidgets::awesomeCheckbox(
-                inputId = ns("is_mp_concentration"),
-                label = "Show Microplastics Concentration",
-                value = FALSE,
-                status = "danger"
-              ),
-              shinycssloaders::withSpinner( plotOutput(ns('concentration_plot')), type = 5),
+              uiOutput(ns("concentration_switch_ui")),
+              plotOutput(ns('concentration_plot')),
               DT::DTOutput(ns("dynamicTable"))
             ),
             card_footer(
@@ -56,13 +53,17 @@ mod_pie_plot_func_ui <- function(id){
               downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
               fill = FALSE
             )
-
           ),
           bslib::card(
-            height = '1000px',
             full_screen = FALSE,
             card_header(
-              "Sample Composition Plots",
+              "Sample Composition Plots"
+            ),
+            card_body(
+              fill = FALSE,
+              fillable = FALSE,
+              padding = 0,
+              gap = 0,
               layout_column_wrap(
                 width = 1/2,
                 fillable = TRUE,
@@ -72,15 +73,9 @@ mod_pie_plot_func_ui <- function(id){
                   choices = c('size_fraction','morphology','color', 'chemicaltype')
                 ),
                 uiOutput(ns("mp_switch_ui"))
-
-              )
-            ),
-            card_body(
-              fill = TRUE,
-              fillable = TRUE,
-              padding = 0,
-              gap = 0,
-              shinycssloaders::withSpinner(plotOutput(ns('pie_plot'), height="800px"), type = 5)
+              ),
+              plotOutput(ns('pie_plot'), height="600px"),
+              plotOutput(ns('pie_plot_count'), height="600px")
             ),
             card_footer(
               downloadButton(ns("download_pie_plot_dat"), "Download Data"),
@@ -95,7 +90,7 @@ mod_pie_plot_func_ui <- function(id){
         h3("Microplastics Concentration Calculation"),
         bslib::card(
           bslib::card_body(
-            shinycssloaders::withSpinner(uiOutput(ns("method_ui")),type = 5)
+            uiOutput(ns("method_ui"))
           )
         )
       )
@@ -109,6 +104,22 @@ mod_pie_plot_func_ui <- function(id){
 mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+
+    output$concentration_switch_ui <- renderUI({
+      shinyWidgets::switchInput(
+        inputId = ns("is_mp_concentration"),
+        # Display the current mode as the label:
+        label = if (isTRUE(input$is_mp_concentration)) "All Particles" else "Only MP Particles",
+        # Default value is FALSE (show total concentration):
+        value = input$is_mp_concentration %||% TRUE,
+        # The labels shown on the toggle itself:
+        onLabel = "Only MP Particles",
+        offLabel = "All Particles",
+        onStatus = "primary",
+        offStatus = "primary",
+        size = "normal"
+      )
+    })
 
     output$mp_switch_ui <- renderUI({
       shinyWidgets::switchInput(
@@ -293,6 +304,14 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       p
     })
 
+    output$pie_plot_count <- renderPlot({
+      req(input$pie_type)
+      p <- get_stacked_bar_plot_count(
+        plot_dat = processed_data()$pie_plot_dat,
+        breakdowntype = input$pie_type
+      )
+      p
+    })
 
     output$concentration_plot <- renderPlot({
       p <- get_concentration_plot(

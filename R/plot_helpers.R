@@ -95,18 +95,30 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
   y_lim <- max(plot_dat$total_concentration, plot_dat$total_concentration_mp, na.rm = TRUE) * 1.1
 
   if (is_mp) {
+    ylabel <- 'Concentration (MP Particles/L)'
+    p <- ggplot(plot_dat, aes(x = location, y = total_concentration_mp, group = event, fill = as.factor(event))) +
+      geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black") +
+      geom_text(aes(label = round(total_concentration_mp, 1)),
+                position = dodge, vjust = -0.5, size = 6, color = "black", show.legend = FALSE) +
+      scale_fill_manual(name = "Event", values = COLOR_PALETTE) +
+      #guides(fill = guide_legend(override.aes = list(alpha = 0.3))) +
+      ylim(0,  max(plot_dat$total_concentration_mp, na.rm = TRUE) * 1.1) +
+      labs(x = "Location", y = ylabel)
+  } else {
     # Format labels
-    plot_dat$label_total <- as.character(round(plot_dat$total_concentration, 1))
-    plot_dat$label_mp <- paste0(" (", round(plot_dat$total_concentration_mp, 1), ")")
+    plot_dat$label_total <- as.character(round(plot_dat$total_concentration_mp, 1))
+    plot_dat$label_mp <- paste0(" (", round(plot_dat$total_concentration, 1), ")")
 
     # Factor to control label color order
-    plot_dat$label_type_total <- factor("All Particle Concentration",
-                                        levels = c("All Particle Concentration", "MP Particle Concentration"))
-    plot_dat$label_type_mp <- factor("MP Particle Concentration",
-                                     levels = c("All Particle Concentration", "MP Particle Concentration"))
+    plot_dat$label_type_total <- factor("MP Concentration",
+                                        levels = c( "MP Concentration", "Total Concentration"))
+    plot_dat$label_type_mp <- factor("Total Concentration",
+                                     levels = c("MP Concentration", "Total Concentration"))
 
-    text_colors <- c("All Particle Concentration" = "red",
-                     "MP Particle Concentration" = "darkred")
+    text_colors <- c(
+      "MP Concentration" = "black",
+      "Total Concentration" = "red"
+    )
 
     # Main plot with bars and text labels (turned off legend for text)
     p <- ggplot(plot_dat, aes(x = location, group = event)) +
@@ -132,8 +144,8 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
 
       # Dummy layer to create a legend with squares
       geom_point(
-        data = data.frame(legend = factor(c("All Particle Concentration", "MP Particle Concentration"),
-                                          levels = c("All Particle Concentration", "MP Particle Concentration"))),
+        data = data.frame(legend = factor(c("MP Concentration","Total Concentration"),
+                                          levels = c("MP Concentration", "Total Concentration"))),
         aes(x = Inf, y = Inf, color = legend),
         shape = 15, size = 0.001, #as small as possible
         inherit.aes = FALSE  # do not inherit global aes like group = event
@@ -148,21 +160,71 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
       ylim(0, y_lim) +
       labs(x = "Location", y = ylabel)
 
-  } else {
-    # Alternative branch for non-MP
-    p <- ggplot(plot_dat, aes(x = location, y = total_concentration, group = event, fill = as.factor(event))) +
-      geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black", alpha = 0.3) +
-      geom_text(aes(label = round(total_concentration, 1)),
-                position = dodge, vjust = -0.5, size = 6, color = "black", show.legend = FALSE) +
-      scale_fill_manual(name = "Event", values = COLOR_PALETTE) +
-      guides(fill = guide_legend(override.aes = list(alpha = 0.3))) +
-      ylim(0, y_lim) +
-      labs(x = "Location", y = ylabel)
   }
 
   return(p)
 }
 
+
+
+get_stacked_bar_plot_count <- function(plot_dat, breakdowntype) {
+  # Set custom levels for location
+  location_levels <- c(
+    sort(unique(plot_dat$location[grepl("^influent", plot_dat$location)])),
+    sort(unique(plot_dat$location[grepl("^effluent", plot_dat$location)]))
+  )
+  plot_dat$location <- factor(plot_dat$location, levels = location_levels)
+
+  # Create a dedicated factor column for the breakdown variable
+  plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
+
+  # If the breakdown is by size_fraction then adjust the factor levels and color palette
+  if (breakdowntype == "size_fraction") {
+    size_levels <- c("20", "63", "125", "355", "500")
+    # Remove µm suffix (if any) and force levels
+    plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
+
+    # Define legend labels with µm suffix
+    legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
+
+    # Custom blue color palette
+    blue_palette <- c(
+      "20"  = "#cce5ff",
+      "63"  = "#66b2ff",
+      "125" = "#3399FF",
+      "355" = "#0066CC",
+      "500" = "#0000FF"
+    )
+    fill_scale <- scale_fill_manual(
+      values = setNames(blue_palette, size_levels),
+      labels = legend_labels
+    )
+  } else {
+    # For other breakdowns, simply use the default discrete scale.
+    legend_summary <- plot_dat %>%
+      dplyr::group_by(category) %>%
+      dplyr::summarise(dummy = 1, .groups = 'drop')
+
+    legend_labels <- as.character(legend_summary$category)
+    names(legend_labels) <- legend_summary$category
+
+    fill_scale <- scale_fill_discrete(labels = legend_labels)
+  }
+
+  # Create the stacked bar plot using count instead of percentage:
+  if (nrow(plot_dat) > 0) {
+    final_plot <- ggplot(plot_dat, aes(x = location, y = count, fill = category)) +
+      geom_bar(stat = "identity", width = 0.3) +
+      facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x)), nrow = 1) +
+      labs(fill = breakdowntype, y = "Number of Particles") +
+      fill_scale +
+      scale_y_continuous(breaks = function(x) seq(0, max(x), by = 5))
+  } else {
+    final_plot <- ggplot()
+  }
+
+  final_plot
+}
 
 
 
