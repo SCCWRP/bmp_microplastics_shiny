@@ -7,7 +7,7 @@
 #'
 #' @return A ggplot object containing the arranged pie plots for each event.
 #' @noRd
-get_stacked_bar_plot <- function(plot_dat, breakdowntype){
+get_stacked_bar_plot <- function(plot_dat, breakdowntype) {
   # Set custom levels for location
   location_levels <- c(
     sort(unique(plot_dat$location[grepl("^influent", plot_dat$location)])),
@@ -18,17 +18,10 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype){
   # Create a dedicated factor column for the breakdown variable
   plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
 
-  # Apply ordering and blue color scale if size_fraction
   if (breakdowntype == "size_fraction") {
-    # Force order and remove µm if present
     size_levels <- c("20", "63", "125", "355", "500")
     plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
-
-    # Define legend labels with µm suffix
     legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
-
-    # Create color palette from light to dark blue
-    #blue_palette <- colorRampPalette(c("#e6f0ff", "#0000FF"))(length(size_levels))
     blue_palette <- c(
       "20"  = "#cce5ff",
       "63"  = "#66b2ff",
@@ -40,23 +33,54 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype){
       values = setNames(blue_palette, size_levels),
       labels = legend_labels
     )
+
+  } else if (breakdowntype == "color") {
+    color_vals <- as.character(plot_dat$category)
+    valid_colors <- grDevices::colors()
+    is_hex <- grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", color_vals)
+    is_named <- color_vals %in% valid_colors
+    valid <- is_named | is_hex
+
+    # Assign fallback colors for invalid values
+    unique_vals <- unique(color_vals)
+    fallback_colors <- c(
+      "multicolor" = "#00FFFF",  # Purple
+      "clear"      = "#00FFFF",  # Dark Gray
+      "unknown"    = "#00FFFF"   # Chocolate
+    )
+
+    # Build color mapping
+    color_mapping <- sapply(unique_vals, function(val) {
+      if (val %in% valid_colors || grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", val)) {
+        val
+      } else if (val %in% names(fallback_colors)) {
+        fallback_colors[[val]]
+      } else {
+        fallback_colors[["unknown"]]
+      }
+    })
+    names(color_mapping) <- unique_vals
+
+    fill_scale <- scale_fill_manual(values = color_mapping)
+
   } else {
-    # Default behavior for other breakdowns
     legend_summary <- plot_dat %>%
       group_by(category) %>%
       summarise(dummy = 1, .groups = 'drop')
-
     legend_labels <- as.character(legend_summary$category)
     names(legend_labels) <- legend_summary$category
-
     fill_scale <- scale_fill_discrete(labels = legend_labels)
   }
 
   if (nrow(plot_dat) > 0) {
-    final_plot <- ggplot(plot_dat, aes(x = location, y = percentage, fill = category)) +
+    final_plot <- ggplot(plot_dat, aes(
+      x = location,
+      y = percentage,
+      fill = category
+    )) +
       geom_bar(stat = "identity", width = 0.3) +
       facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x)), nrow = 1) +
-      labs(fill = breakdowntype) +
+      labs(fill = breakdowntype, y = "Percentage of particle (%)") +
       fill_scale +
       scale_y_continuous(breaks = seq(0, 100, by = 10))
   } else {
@@ -65,6 +89,7 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype){
 
   final_plot
 }
+
 
 
 
@@ -178,16 +203,10 @@ get_stacked_bar_plot_count <- function(plot_dat, breakdowntype) {
   # Create a dedicated factor column for the breakdown variable
   plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
 
-  # If the breakdown is by size_fraction then adjust the factor levels and color palette
   if (breakdowntype == "size_fraction") {
     size_levels <- c("20", "63", "125", "355", "500")
-    # Remove µm suffix (if any) and force levels
     plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
-
-    # Define legend labels with µm suffix
     legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
-
-    # Custom blue color palette
     blue_palette <- c(
       "20"  = "#cce5ff",
       "63"  = "#66b2ff",
@@ -199,8 +218,36 @@ get_stacked_bar_plot_count <- function(plot_dat, breakdowntype) {
       values = setNames(blue_palette, size_levels),
       labels = legend_labels
     )
+
+  } else if (breakdowntype == "color") {
+    color_vals <- as.character(plot_dat$category)
+    valid_colors <- grDevices::colors()
+    is_hex <- grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", color_vals)
+    is_named <- color_vals %in% valid_colors
+    valid <- is_named | is_hex
+
+    # Assign fallback colors for invalid values
+    unique_vals <- unique(color_vals)
+    fallback_colors <- c(
+      "multicolor" = "#00FFFF",  # Purple
+      "clear"      = "#00FFFF",  # Dark Gray
+      "unknown"    = "#00FFFF"   # Chocolate
+    )
+
+    color_mapping <- sapply(unique_vals, function(val) {
+      if (val %in% valid_colors || grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", val)) {
+        val
+      } else if (val %in% names(fallback_colors)) {
+        fallback_colors[[val]]
+      } else {
+        fallback_colors[["unknown"]]
+      }
+    })
+    names(color_mapping) <- unique_vals
+
+    fill_scale <- scale_fill_manual(values = color_mapping)
+
   } else {
-    # For other breakdowns, simply use the default discrete scale.
     legend_summary <- plot_dat %>%
       dplyr::group_by(category) %>%
       dplyr::summarise(dummy = 1, .groups = 'drop')
@@ -211,12 +258,11 @@ get_stacked_bar_plot_count <- function(plot_dat, breakdowntype) {
     fill_scale <- scale_fill_discrete(labels = legend_labels)
   }
 
-  # Create the stacked bar plot using count instead of percentage:
   if (nrow(plot_dat) > 0) {
     final_plot <- ggplot(plot_dat, aes(x = location, y = count, fill = category)) +
       geom_bar(stat = "identity", width = 0.3) +
       facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x)), nrow = 1) +
-      labs(fill = breakdowntype, y = "Number of Particles") +
+      labs(fill = breakdowntype, y = "Number of Particles") +  # Y-axis label here
       fill_scale +
       scale_y_continuous(breaks = function(x) seq(0, max(x), by = 5))
   } else {
