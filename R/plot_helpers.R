@@ -122,12 +122,12 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
       geom_text(aes(label = label_total,
                     y = pmax(total_concentration, total_concentration_mp),
                     color = label_type_total),
-                position = dodge, vjust = -0.5, hjust = 1, size = 6,
+                position = dodge, vjust = -0.5, hjust = 1, size = 5.5,
                 show.legend = FALSE) +
       geom_text(aes(label = label_mp,
                     y = pmax(total_concentration, total_concentration_mp),
                     color = label_type_mp),
-                position = dodge, vjust = -0.5, hjust = 0, size = 6,
+                position = dodge, vjust = -0.5, hjust = 0, size = 5.5,
                 show.legend = FALSE) +
 
       # Dummy layer to create a legend with squares
