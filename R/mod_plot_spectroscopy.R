@@ -71,12 +71,8 @@ mod_pie_plot_func_ui <- function(id){
                   ns('pie_type'),
                   choices = c('size_fraction','morphology','color', 'chemicaltype')
                 ),
-                shinyWidgets::awesomeCheckbox(
-                  inputId = ns("is_mp_pie"),
-                  label = "Only Microplastics",
-                  value = FALSE,
-                  status = "danger"
-                )
+                uiOutput(ns("mp_switch_ui"))
+
               )
             ),
             card_body(
@@ -99,7 +95,7 @@ mod_pie_plot_func_ui <- function(id){
         h3("Microplastics Concentration Calculation"),
         bslib::card(
           bslib::card_body(
-            uiOutput(ns("method_ui"))
+            shinycssloaders::withSpinner(uiOutput(ns("method_ui")),type = 5)
           )
         )
       )
@@ -113,6 +109,19 @@ mod_pie_plot_func_ui <- function(id){
 mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+
+    output$mp_switch_ui <- renderUI({
+      shinyWidgets::switchInput(
+        inputId = ns("is_mp_pie"),
+        label = if (isTRUE(input$is_mp_pie)) "All Particles" else "Only MP Particles",
+        value = input$is_mp_pie %||% TRUE,  # use TRUE as default if NULL
+        onLabel = "Only MP Particles",
+        offLabel = "All Particles",
+        onStatus = "primary",
+        offStatus = "primary",
+        size = "normal"
+      )
+    })
 
     output$method_ui <- renderUI({
       # Replace with your actual URL to the Markdown file
@@ -346,11 +355,13 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
           bmpselect = input$bmp_select,
           yearselect = input$year_select,
           sizefractionselect = input$sizefraction_select,
-          replicateselect = input$replicate_select
+          replicateselect = input$replicate_select,
+          is_mp = input$is_mp_concentration
         )
         ggsave(file, plot = plot_obj  + theme_light() + theme(
           strip.text = element_text(size = 14),
           axis.text.x = element_text(size = 10),
+          axis.text.y = element_text(size = 10),
           axis.title.y = element_text(size = 14),
           plot.title = element_text(size = 18)
         ), width = 16, height = 8, dpi = 300, units = "in")
