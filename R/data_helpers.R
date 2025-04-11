@@ -16,7 +16,7 @@
 get_pieplot_data <- function(
     dat,
     constants,
-    matrixselect,         # New parameter
+    matrixselect,
     bmpselect,
     yearselect,
     sizefractionselect,
@@ -178,9 +178,6 @@ calculate_mda_analysis <- function(dat_rawftir) {
 }
 
 get_concentration <- function(raw_data_list){
-  # Load required package
-  library(dplyr)
-
   # Unpack the list elements
   rawftir <- raw_data_list$dat_rawftir
   rawall <- raw_data_list$dat_rawall

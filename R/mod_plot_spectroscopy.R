@@ -297,7 +297,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$pie_plot <- renderPlot({
       req(input$pie_type)
-      p <- get_stacked_bar_plot (
+      p <- get_stacked_bar_plot(
         plot_dat = processed_data()$pie_plot_dat,
         breakdowntype = input$pie_type
       )
@@ -307,8 +307,9 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     output$pie_plot_count <- renderPlot({
       req(input$pie_type)
       p <- get_stacked_bar_plot_count(
-        plot_dat = processed_data()$pie_plot_dat,
-        breakdowntype = input$pie_type
+        plot_dat = processed_data()$concentration_plot_dat$concentration_dat,
+        breakdowntype = input$pie_type,
+        is_mp =input$is_mp_pie
       )
       p
     })
@@ -324,7 +325,6 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       )
       p
     })
-
 
     output$download_pie_plot_dat <- downloadHandler(
       filename = function() {
