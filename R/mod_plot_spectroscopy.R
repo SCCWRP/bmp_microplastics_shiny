@@ -341,7 +341,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         paste("concentration-data-", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
-        dat <- processed_data()$concentration_plot_dat$concentration_dat
+        dat <- processed_data()$concentration_plot_dat$plot_dat
         write.csv(dat, file, row.names = FALSE)
       }
     )
