@@ -13,7 +13,7 @@ app_ui <- function(request) {
     shinyjs::useShinyjs(),
     useBusyIndicators(),
     page_navbar(
-      title = "BMP Microplastics (last updated 4/25/25)",
+      title = "BMP Microplastics (last updated 4/25/25) test",
       theme = bs_theme(preset = "cosmo"),
       navbar_options = bslib::navbar_options(
         bg = bslib::bs_get_variables(bslib::bs_theme(preset = "cosmo"), "primary")
