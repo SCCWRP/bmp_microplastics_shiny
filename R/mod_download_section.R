@@ -58,8 +58,14 @@ mod_download_section_server <- function(id, pool, raw_data_list){
       },
       content = function(file) {
 
-        all_spectroscopy_summary <- get_concentration(raw_data_list)
-
+        all_spectroscopy_summary <- get_concentration(raw_data_list) %>% select(-note)
+        raw_ftir <- raw_data_list$dat_rawftir
+        # Perform the merge
+        # all_spectroscopy_summary <- all_spectroscopy_summary %>%
+        #   left_join(
+        #     raw_ftir %>% select(bmp, year, event, location, matrix, replicate, size_fraction, typeblank) %>% distinct(),
+        #     by = c("bmp", "year", "event", "location", "matrix", "replicate", "size_fraction")
+        #   )
         # Create a new Excel workbook
         wb <- openxlsx::createWorkbook()
 

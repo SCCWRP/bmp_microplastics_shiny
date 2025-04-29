@@ -62,14 +62,19 @@ app_server <- function(input, output, session) {
     )
 
     # Remove excluded columns
-    dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols))
-    dat_rawftir <- dat_rawftir %>% select(-intersect(names(dat_rawftir), excluded_cols))
+    dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols)) %>% filter(typeblank == 'non-blank')
+    dat_rawftir <- dat_rawftir %>% select(-intersect(names(dat_rawftir), excluded_cols)) %>% filter(typeblank == 'non-blank')
     constants <- constants %>% select(-intersect(names(constants), excluded_cols))
+
+    dat_rawall_blanks <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols)) %>% filter(typeblank != 'non-blank')
+    dat_rawftir_blanks <- dat_rawftir %>% select(-intersect(names(dat_rawftir), excluded_cols)) %>% filter(typeblank != 'non-blank')
 
     # Save
     save(
       dat_rawall,
       dat_rawftir,
+      dat_rawall_blanks,
+      dat_rawftir_blanks,
       dat_summaryall,
       constants,
       mda_analysis,
