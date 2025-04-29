@@ -14,7 +14,8 @@ mod_pie_plot_func_ui <- function(id){
     open = "open",
     width = "15%",
     title = h4('Control Panel'),
-    shinyWidgets::pickerInput(ns("matrix_select"), "Select Matrix:", choices = c('media','stormwater'), selected = 'stormwater'),
+    shinyWidgets::pickerInput(ns("matrix_select"), "Select Matrix:",
+                              choices = c("Media" = "media", "Runoff" = "stormwater"), selected = 'stormwater'),
     shinyWidgets::pickerInput(ns("bmp_select"), "Select BMP:", choices = NULL),
     shinyWidgets::pickerInput(ns("year_select"), "Select Sampling Year:", choices = NULL),
     shinyWidgets::pickerInput(ns("replicate_select"), "Select Lab Replicate:", choices = NULL),
@@ -104,6 +105,10 @@ mod_pie_plot_func_ui <- function(id){
 mod_pie_plot_func_server <- function(id, pool, raw_data_list){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+
+    # Hide the replicate picker when the app starts
+    shinyjs::hide("replicate_select")
+
 
     output$concentration_switch_ui <- renderUI({
       shinyWidgets::switchInput(
@@ -252,7 +257,8 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     })
 
     observeEvent(list(input$bmp_select, input$year_select), {
-      shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
+      #shinyWidgets::updatePickerInput(session, "replicate_select", choices = replicate())
+      shinyWidgets::updatePickerInput(session, "replicate_select", choices = 1)
     })
 
     observeEvent(list(input$bmp_select, input$year_select, input$replicate_select), {
@@ -317,10 +323,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
     output$concentration_plot <- renderPlot({
       p <- get_concentration_plot(
         plot_dat = processed_data()$concentration_plot_dat$plot_dat,
-        bmpselect = input$bmp_select,
-        yearselect=  input$year_select,
-        sizefractionselect = input$sizefraction_select,
-        replicateselect = input$replicate_select,
+        matrixselect = input$matrix_select,
         is_mp = input$is_mp_concentration
       )
       p

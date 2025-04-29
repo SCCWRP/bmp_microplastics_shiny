@@ -5,7 +5,7 @@ account: sccwrp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 12336318
-bundleId: 10196111
+bundleId: 10202687
 url: https://sccwrp.shinyapps.io/bmp_microplastics_shiny/
 version: 1
 asMultiple: FALSE

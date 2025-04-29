@@ -11,10 +11,16 @@
 #'
 #' @return A ggplot object containing the concentration bar plot.
 #' @noRd
-get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefractionselect, replicateselect, is_mp = FALSE){
+get_concentration_plot <- function(plot_dat, matrixselect, is_mp = FALSE){
 
   COLOR_PALETTE <- c(`1` = "#0000FF", `2` = "#00FF00", `3` = "#FFC0CB", `4` = "#8B0000")
-  ylabel <- 'Concentration (Particles/L)'
+
+  if (matrixselect == 'media') {
+    ylabel <- 'Concentration (Particles/gram)'
+  } else {
+    ylabel <- 'Concentration (Particles/L)'
+
+  }
 
   plot_dat$location <- trimws(plot_dat$location)
 
@@ -22,13 +28,20 @@ get_concentration_plot <- function(plot_dat, bmpselect, yearselect, sizefraction
     sort(unique(plot_dat$location[grepl("^(?i)(inlet|influent)", plot_dat$location)])),
     sort(unique(plot_dat$location[grepl("^(?i)(outlet|effluent)", plot_dat$location)]))
   )
+
   plot_dat$location <- factor(plot_dat$location, levels = location_levels)
 
   dodge <- position_dodge(width = 0.7)
   y_lim <- max(plot_dat$total_concentration, plot_dat$total_concentration_mp, na.rm = TRUE) * 1.1
 
   if (is_mp) {
-    ylabel <- 'Concentration (MP Particles/L)'
+
+    if (matrixselect == 'media'){
+      ylabel <- 'Concentration (MP Particles/gram)'
+    } else {
+      ylabel <- 'Concentration (MP Particles/L)'
+    }
+
     p <- ggplot(plot_dat, aes(x = location, y = total_concentration_mp, group = event, fill = as.factor(event))) +
       geom_bar(stat = "identity", position = dodge, width = 0.5, color = "black") +
       geom_text(aes(label = round(total_concentration_mp, 1)),

@@ -29,8 +29,8 @@ app_server <- function(input, output, session) {
     excluded_cols <- c('login_email', 'created_date', 'submissionid', 'warnings', 'last_edited_date', 'globalid', 'created_user', 'last_edited_user')
 
     # Raw tables
-    dat_rawall <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
-    dat_rawftir <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
+    dat_rawall_org <- pool::dbGetQuery(pool, "SELECT * FROM tbl_bmp_particle_raw_all ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
+    dat_rawftir_org <- pool::dbGetQuery(pool, "SELECT * FROM vw_bmp_raw_ftir ORDER BY bmp, year, event, location, matrix, size_fraction, replicate, sampleid, particleid")
     constants <- pool::dbGetQuery(pool, "SELECT * FROM bmp_constants ORDER BY bmp, year, event, location, matrix, size_fraction, replicate")
 
     # Analysis tables
@@ -62,12 +62,12 @@ app_server <- function(input, output, session) {
     )
 
     # Remove excluded columns
-    dat_rawall <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols)) %>% filter(typeblank == 'non-blank')
-    dat_rawftir <- dat_rawftir %>% select(-intersect(names(dat_rawftir), excluded_cols)) %>% filter(typeblank == 'non-blank')
+    dat_rawall <- dat_rawall_org %>% select(-intersect(names(dat_rawall_org), excluded_cols)) %>% filter(typeblank == 'non-blank')
+    dat_rawftir <- dat_rawftir_org %>% select(-intersect(names(dat_rawftir_org), excluded_cols)) %>% filter(typeblank == 'non-blank')
     constants <- constants %>% select(-intersect(names(constants), excluded_cols))
 
-    dat_rawall_blanks <- dat_rawall %>% select(-intersect(names(dat_rawall), excluded_cols)) %>% filter(typeblank != 'non-blank')
-    dat_rawftir_blanks <- dat_rawftir %>% select(-intersect(names(dat_rawftir), excluded_cols)) %>% filter(typeblank != 'non-blank')
+    dat_rawall_blanks <- dat_rawall_org %>% select(-intersect(names(dat_rawall_org), excluded_cols)) %>% filter(typeblank != 'non-blank')
+    dat_rawftir_blanks <- dat_rawftir_org %>% select(-intersect(names(dat_rawftir_org), excluded_cols)) %>% filter(typeblank != 'non-blank')
 
     # Save
     save(
@@ -84,10 +84,13 @@ app_server <- function(input, output, session) {
     raw_data_list <- list(
       dat_rawall = dat_rawall,
       dat_rawftir = dat_rawftir,
+      dat_rawall_blanks = dat_rawall_blanks,
+      dat_rawftir_blanks = dat_rawftir_blanks,
       dat_summaryall = dat_summaryall,
       constants = constants,
       mda_analysis = mda_analysis
     )
+
   } else {
     # Load the most recent .Rdata file
     files <- list.files("data-raw", pattern = "^bmp_data_raw_\\d{4}-\\d{2}-\\d{2}\\.Rdata$", full.names = TRUE)
@@ -99,6 +102,8 @@ app_server <- function(input, output, session) {
     raw_data_list <- list(
       dat_rawall = dat_rawall,
       dat_rawftir = dat_rawftir,
+      dat_rawall_blanks = dat_rawall_blanks,
+      dat_rawftir_blanks = dat_rawftir_blanks,
       dat_summaryall = dat_summaryall,
       constants = constants,
       mda_analysis = mda_analysis
