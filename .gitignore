@@ -7,5 +7,5 @@ inst/doc
 .Renviron
 rsconnect/*
 rsconnect/shinyapps.io/sccwrp/bmp_microplastics_shiny.dcf
-R/utils.R
+R/_ignore_local_test.R
 data-raw/*
