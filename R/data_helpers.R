@@ -214,10 +214,17 @@ get_concentration <- function(raw_data_list){
   # Calculate back_calculated counts and final concentrations
   out <- merged_data %>%
     mutate(
+      back_calculated_particle_count = suppressWarnings(
+        if_else(
+          is_subsample == "y",
+          count_micro / (pct_filter_counted * pct_sample_processed),
+          count_spectro / (pct_filter_counted * pct_sample_processed)
+        )
+      ),
       back_calculated_particle_count = if_else(
-        is_subsample == "y",
-        count_micro / (pct_filter_counted * pct_sample_processed),
-        count_spectro / (pct_filter_counted * pct_sample_processed)
+        is.finite(back_calculated_particle_count) & !is.na(back_calculated_particle_count),
+        back_calculated_particle_count,
+        0
       ),
       back_calculated_mp_particle_count = back_calculated_particle_count * percentage_mp,
       concentration_all = back_calculated_particle_count / unit_passing,

@@ -48,12 +48,12 @@ mod_pie_plot_func_ui <- function(id){
               uiOutput(ns("concentration_switch_ui")),
               plotOutput(ns('concentration_plot')),
               DT::DTOutput(ns("dynamicTable"))
-            ),
-            card_footer(
-              downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
-              downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
-              fill = FALSE
             )
+            # card_footer(
+            #   downloadButton(ns("download_concentration_plot_dat"), "Download Data"),
+            #   downloadButton(ns("download_concentration_plot"), "Download Plot"),  # <-- Add this
+            #   fill = FALSE
+            # )
           ),
           bslib::card(
             full_screen = FALSE,
@@ -75,14 +75,14 @@ mod_pie_plot_func_ui <- function(id){
                 ),
                 uiOutput(ns("mp_switch_ui"))
               ),
-              plotOutput(ns('pie_plot'), height="600px"),
-              plotOutput(ns('pie_plot_count'), height="600px")
-            ),
-            card_footer(
-              downloadButton(ns("download_pie_plot_dat"), "Download Data for the top plot"),
-              downloadButton(ns("download_pie_plot_dat_bottom"), "Download Data for the bottom plot"),
-              downloadButton(ns("download_pie_plot"), "Download Plot"),
+              plotOutput(ns('concentration_per_category'), height="600px"),
+              plotOutput(ns('percent_per_category'), height="600px")
             )
+            # card_footer(
+            #   downloadButton(ns("download_pie_plot_dat"), "Download Data for the top plot"),
+            #   downloadButton(ns("download_pie_plot_dat_bottom"), "Download Data for the bottom plot"),
+            #   downloadButton(ns("download_pie_plot"), "Download Plot"),
+            # )
           )
         )
       ),
@@ -129,9 +129,9 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$mp_switch_ui <- renderUI({
       shinyWidgets::switchInput(
-        inputId = ns("is_mp_pie"),
-        label = if (isTRUE(input$is_mp_pie)) "All Particles" else "Only MP Particles",
-        value = input$is_mp_pie %||% TRUE,  # use TRUE as default if NULL
+        inputId = ns("is_mp_sample_composition"),
+        label = if (isTRUE(input$is_mp_sample_composition)) "All Particles" else "Only MP Particles",
+        value = input$is_mp_sample_composition %||% TRUE,  # use TRUE as default if NULL
         onLabel = "Only MP Particles",
         offLabel = "All Particles",
         onStatus = "primary",
@@ -284,7 +284,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         sizefractionselect = input$sizefraction_select,
         replicateselect = input$replicate_select,
         pie_type = input$pie_type,
-        is_mp = input$is_mp_pie
+        is_mp = input$is_mp_sample_composition
       )
 
       concentration_plot_dat <- get_concentrationplot_data(
@@ -300,25 +300,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         pie_plot_dat = pie_plot_dat,
         concentration_plot_dat = concentration_plot_dat
       )
-    })
 
-    output$pie_plot <- renderPlot({
-      req(input$pie_type)
-      p <- get_stacked_bar_plot(
-        plot_dat = processed_data()$pie_plot_dat,
-        breakdowntype = input$pie_type
-      )
-      p
-    })
-
-    output$pie_plot_count <- renderPlot({
-      req(input$pie_type)
-      p <- get_stacked_bar_plot_count(
-        plot_dat = processed_data()$concentration_plot_dat$concentration_dat,
-        breakdowntype = input$pie_type,
-        is_mp =input$is_mp_pie
-      )
-      p
     })
 
     output$concentration_plot <- renderPlot({
@@ -326,6 +308,26 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
         plot_dat = processed_data()$concentration_plot_dat$plot_dat,
         matrixselect = input$matrix_select,
         is_mp = input$is_mp_concentration
+      )
+      p
+    })
+
+    output$concentration_per_category <- renderPlot({
+      req(input$pie_type)
+      p <- get_concentration_per_category(
+        plot_dat = processed_data()$concentration_plot_dat$concentration_dat,
+        breakdowntype = input$pie_type,
+        is_mp =input$is_mp_sample_composition
+      )
+      p
+    })
+
+    output$percent_per_category <- renderPlot({
+      req(input$pie_type)
+      p <- get_percent_per_category(
+        plot_dat = processed_data(),
+        breakdowntype = input$pie_type,
+        is_mp = input$is_mp_sample_composition
       )
       p
     })

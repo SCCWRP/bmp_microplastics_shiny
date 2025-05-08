@@ -122,10 +122,153 @@ get_concentration_plot <- function(plot_dat, matrixselect, is_mp = FALSE){
 #'
 #' @return A ggplot object containing the arranged pie plots for each event.
 #' @noRd
-get_stacked_bar_plot <- function(plot_dat, breakdowntype) {
-  # Set custom levels for location
+get_concentration_per_category <- function(plot_dat, breakdowntype, is_mp) {
+
+  if (breakdowntype != "size_fraction") {
+    out <- ggplot() +
+      annotate("text", x = 0.5, y = 0.5, label = paste("Concentration plot per category cannot be calculated if grouped by ", breakdowntype,". You can see the specstrocopy particle count data below."), size = 5, hjust = 0.5) +
+      theme_void()
+    return (out)
+  }
+
+  plot_dat <- plot_dat %>% filter(
+    location != 'not applicable'
+  )
+
   plot_dat$location <- trimws(plot_dat$location)
 
+  location_levels <- c(
+    sort(unique(plot_dat$location[grepl("^(?i)(inlet|influent)", plot_dat$location)])),
+    sort(unique(plot_dat$location[grepl("^(?i)(outlet|effluent)", plot_dat$location)]))
+  )
+
+  plot_dat$location <- factor(plot_dat$location, levels = location_levels)
+
+  plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
+
+
+  size_levels <- c("20", "63", "125", "355", "500")
+  plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
+  legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
+  blue_palette <- c(
+    "20"  = "#cce5ff",
+    "63"  = "#66b2ff",
+    "125" = "#3399FF",
+    "355" = "#0066CC",
+    "500" = "#0000FF"
+  )
+  fill_scale <- scale_fill_manual(
+    values = setNames(blue_palette, size_levels),
+    labels = legend_labels
+  )
+
+  # Filter out infinite y-values
+  if (is_mp) {
+    plot_dat <- plot_dat %>% filter(is.finite(concentration_mp))
+  } else {
+    plot_dat <- plot_dat %>% filter(is.finite(concentration_all))
+  }
+
+  if (nrow(plot_dat) > 0) {
+    if (is_mp){
+      ylabel <- 'Concentration (MP Particles/L)'
+      ymax <- max(plot_dat$concentration_mp, na.rm = TRUE) * 1.1
+      final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_mp, fill = category))
+    } else {
+      ylabel <- 'Concentration (Particles/L)'
+      ymax <- max(plot_dat$concentration_all, na.rm = TRUE) * 1.1
+      final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_all, fill = category))
+    }
+    final_plot <- final_plot +
+      geom_bar(stat = "identity", width = 0.3) +
+      facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x)), nrow = 1) +
+      labs(fill = breakdowntype, y = ylabel, x = 'Location') +
+      fill_scale
+  } else {
+    final_plot <- ggplot()
+  }
+
+  final_plot
+}
+
+
+get_percent_per_category <- function(plot_dat, breakdowntype, is_mp) {
+  if (breakdowntype == 'size_fraction'){
+    plot_dat <- plot_dat$concentration_plot_dat$concentration_dat
+    if (is_mp){
+      plot_dat <- plot_dat %>%
+        group_by(bmp, year, event, location, matrix, replicate) %>%
+        mutate(
+          percentage = round(100 * concentration_mp / sum(concentration_mp, na.rm = TRUE), 2)
+        ) %>%
+        ungroup()
+    } else {
+      plot_dat <- plot_dat %>%
+        group_by(bmp, year, event, location, matrix, replicate) %>%
+        mutate(
+          percentage = round(100 * concentration_all / sum(concentration_all, na.rm = TRUE), 2)
+        ) %>%
+        ungroup()
+    }
+  } else {
+    plot_dat <- plot_dat$pie_plot_dat
+    if (breakdowntype == 'chemicaltype') {
+      # Step 1: Normalize initial chemical_group for later mapping
+      plot_dat <- plot_dat %>%
+        mutate(
+          chemical_group = case_when(
+            chemicaltype %in% c("tire wear", "rubber") ~ "tire wear/rubber",
+            chemicaltype %in% c("non polymer", "other polymer") ~ chemicaltype,
+            TRUE ~ chemicaltype # placeholder; will refine below
+          )
+        )
+
+      # Step 2: Identify top 5 chemicaltypes per group (excluding predefined ones)
+      fixed_chemtypes <- c("tire wear", "rubber", "non polymer", "other polymer")
+
+      top_5_types <- plot_dat %>%
+        filter(!chemicaltype %in% fixed_chemtypes) %>%
+        group_by(bmp, year, event, location, matrix, replicate, chemicaltype) %>%
+        summarise(total_count = sum(count, na.rm = TRUE), .groups = "drop") %>%
+        group_by(bmp, year, event, location, matrix, replicate) %>%
+        slice_max(order_by = total_count, n = 5, with_ties = FALSE) %>%
+        mutate(in_top5 = TRUE) %>%
+        select(bmp, year, event, location, matrix, replicate, chemicaltype, in_top5)
+
+      # Step 3: Join top 5 info back to original and assign final groupings
+      plot_dat <- plot_dat %>%
+        left_join(top_5_types, by = c("bmp", "year", "event", "location", "matrix", "replicate", "chemicaltype")) %>%
+        mutate(
+          chemical_group = case_when(
+            chemicaltype %in% c("tire wear", "rubber") ~ "tire wear/rubber",
+            chemicaltype %in% c("non polymer", "other polymer") ~ chemicaltype,
+            !is.na(in_top5) & in_top5 ~ chemicaltype,
+            TRUE ~ "Other"
+          )
+        )
+
+      # Step 4: Summarize by full group + chemical group
+      plot_dat <- plot_dat %>%
+        group_by(bmp, year, event, location, matrix, replicate, chemical_group) %>%
+        summarise(count = sum(count, na.rm = TRUE), .groups = "drop")
+
+      # Step 5: Final formatting
+      plot_dat <- plot_dat %>%
+        rename(chemicaltype = chemical_group) %>%
+        filter(chemicaltype != "Other") %>%
+        group_by(bmp, year, event, location, matrix, replicate) %>%
+        mutate(
+          percentage = round(100 * count / sum(count, na.rm = TRUE), 2)
+        ) %>%
+        ungroup()
+    }
+
+  }
+
+  #write.csv(plot_dat, file = "plot_dat.csv", row.names = FALSE)
+
+  # Set custom levels for location
+  plot_dat$location <- trimws(plot_dat$location)
   location_levels <- c(
     sort(unique(plot_dat$location[grepl("^(?i)(inlet|influent)", plot_dat$location)])),
     sort(unique(plot_dat$location[grepl("^(?i)(outlet|effluent)", plot_dat$location)]))
@@ -134,7 +277,6 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype) {
 
   # Create a dedicated factor column for the breakdown variable
   plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
-
   if (breakdowntype == "size_fraction") {
     size_levels <- c("20", "63", "125", "355", "500")
     plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
@@ -205,77 +347,6 @@ get_stacked_bar_plot <- function(plot_dat, breakdowntype) {
 
   final_plot
 }
-
-
-get_stacked_bar_plot_count <- function(plot_dat, breakdowntype, is_mp) {
-
-  if (breakdowntype != "size_fraction") {
-    out <- ggplot() +
-      annotate("text", x = 0.5, y = 0.5, label = paste("Concentration plot per category cannot be calculated for", breakdowntype,". You can still download the particle count data."), size = 5, hjust = 0.5) +
-      theme_void()
-    return (out)
-  }
-
-  plot_dat <- plot_dat %>% filter(
-    location != 'not applicable'
-  )
-
-  plot_dat$location <- trimws(plot_dat$location)
-
-  location_levels <- c(
-    sort(unique(plot_dat$location[grepl("^(?i)(inlet|influent)", plot_dat$location)])),
-    sort(unique(plot_dat$location[grepl("^(?i)(outlet|effluent)", plot_dat$location)]))
-  )
-
-  plot_dat$location <- factor(plot_dat$location, levels = location_levels)
-
-  plot_dat$category <- as.factor(plot_dat[[breakdowntype]])
-
-
-  size_levels <- c("20", "63", "125", "355", "500")
-  plot_dat$category <- factor(gsub("µm", "", plot_dat$category), levels = size_levels)
-  legend_labels <- setNames(paste0(size_levels, "µm"), size_levels)
-  blue_palette <- c(
-    "20"  = "#cce5ff",
-    "63"  = "#66b2ff",
-    "125" = "#3399FF",
-    "355" = "#0066CC",
-    "500" = "#0000FF"
-  )
-  fill_scale <- scale_fill_manual(
-    values = setNames(blue_palette, size_levels),
-    labels = legend_labels
-  )
-
-  # Filter out infinite y-values
-  if (is_mp) {
-    plot_dat <- plot_dat %>% filter(is.finite(concentration_mp))
-  } else {
-    plot_dat <- plot_dat %>% filter(is.finite(concentration_all))
-  }
-
-  if (nrow(plot_dat) > 0) {
-    if (is_mp){
-      ylabel <- 'Concentration (MP Particles/L)'
-      ymax <- max(plot_dat$concentration_mp, na.rm = TRUE) * 1.1
-      final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_mp, fill = category))
-    } else {
-      ylabel <- 'Concentration (Particles/L)'
-      ymax <- max(plot_dat$concentration_all, na.rm = TRUE) * 1.1
-      final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_all, fill = category))
-    }
-    final_plot <- final_plot +
-      geom_bar(stat = "identity", width = 0.3) +
-      facet_wrap(~ event, labeller = labeller(event = function(x) paste("Event", x)), nrow = 1) +
-      labs(fill = breakdowntype, y = ylabel, x = 'Location') +
-      fill_scale
-  } else {
-    final_plot <- ggplot()
-  }
-
-  final_plot
-}
-
 
 
 
