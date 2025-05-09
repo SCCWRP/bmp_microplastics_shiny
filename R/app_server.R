@@ -19,7 +19,7 @@ app_server <- function(input, output, session) {
     password = Sys.getenv("password")
   )
 
-  update <- FALSE
+  update <- TRUE
 
   # Date string for filename
   today <- format(Sys.Date(), "%Y-%m-%d")

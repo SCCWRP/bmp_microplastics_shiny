@@ -227,6 +227,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
       # Arrange and select only the required columns
       constants <- constants %>%
+        filter(!is.na(location)) %>%
         arrange(location) %>%
         distinct(event, location, sample_volume, sub_sample, unit)
       constants
@@ -317,7 +318,8 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
       p <- get_concentration_per_category(
         plot_dat = processed_data()$concentration_plot_dat$concentration_dat,
         breakdowntype = input$pie_type,
-        is_mp =input$is_mp_sample_composition
+        matrixselect = input$matrix_select,
+        is_mp = input$is_mp_sample_composition
       )
       p
     })

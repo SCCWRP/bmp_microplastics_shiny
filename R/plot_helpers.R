@@ -16,7 +16,7 @@ get_concentration_plot <- function(plot_dat, matrixselect, is_mp = FALSE){
   COLOR_PALETTE <- c(`1` = "#0000FF", `2` = "#00FF00", `3` = "#FFC0CB", `4` = "#8B0000")
 
   if (matrixselect == 'media') {
-    ylabel <- 'Concentration (Particles/gram)'
+    ylabel <- 'Concentration (Particles/g)'
   } else {
     ylabel <- 'Concentration (Particles/L)'
 
@@ -37,7 +37,7 @@ get_concentration_plot <- function(plot_dat, matrixselect, is_mp = FALSE){
   if (is_mp) {
 
     if (matrixselect == 'media'){
-      ylabel <- 'Concentration (MP Particles/gram)'
+      ylabel <- 'Concentration (MP Particles/g)'
     } else {
       ylabel <- 'Concentration (MP Particles/L)'
     }
@@ -122,7 +122,7 @@ get_concentration_plot <- function(plot_dat, matrixselect, is_mp = FALSE){
 #'
 #' @return A ggplot object containing the arranged pie plots for each event.
 #' @noRd
-get_concentration_per_category <- function(plot_dat, breakdowntype, is_mp) {
+get_concentration_per_category <- function(plot_dat, breakdowntype, matrixselect, is_mp) {
 
   if (breakdowntype != "size_fraction") {
     out <- ggplot() +
@@ -171,11 +171,19 @@ get_concentration_per_category <- function(plot_dat, breakdowntype, is_mp) {
 
   if (nrow(plot_dat) > 0) {
     if (is_mp){
-      ylabel <- 'Concentration (MP Particles/L)'
+      if (matrixselect == 'media'){
+        ylabel <- 'Concentration (MP Particles/g)'
+      } else {
+        ylabel <- 'Concentration (MP Particles/L)'
+      }
       ymax <- max(plot_dat$concentration_mp, na.rm = TRUE) * 1.1
       final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_mp, fill = category))
     } else {
-      ylabel <- 'Concentration (Particles/L)'
+      if (matrixselect == 'media'){
+        ylabel <- 'Concentration (Particles/g)'
+      } else {
+        ylabel <- 'Concentration (Particles/L)'
+      }
       ymax <- max(plot_dat$concentration_all, na.rm = TRUE) * 1.1
       final_plot <- ggplot(plot_dat, aes(x = location, y = concentration_all, fill = category))
     }
@@ -265,7 +273,6 @@ get_percent_per_category <- function(plot_dat, breakdowntype, is_mp) {
 
   }
 
-  #write.csv(plot_dat, file = "plot_dat.csv", row.names = FALSE)
 
   # Set custom levels for location
   plot_dat$location <- trimws(plot_dat$location)
