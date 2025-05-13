@@ -77,12 +77,12 @@ mod_pie_plot_func_ui <- function(id){
               ),
               plotOutput(ns('concentration_per_category'), height="600px"),
               plotOutput(ns('percent_per_category'), height="600px")
+            ),
+            card_footer(
+              downloadButton(ns("download_pie_plot_dat"), "Download Data for the bottom plot"),
+              downloadButton(ns("download_pie_plot_dat_bottom"), "Download Data for the top plot"),
+              downloadButton(ns("download_pie_plot"), "Download Plot"),
             )
-            # card_footer(
-            #   downloadButton(ns("download_pie_plot_dat"), "Download Data for the top plot"),
-            #   downloadButton(ns("download_pie_plot_dat_bottom"), "Download Data for the bottom plot"),
-            #   downloadButton(ns("download_pie_plot"), "Download Plot"),
-            # )
           )
         )
       ),
@@ -336,7 +336,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$download_pie_plot_dat <- downloadHandler(
       filename = function() {
-        paste("pieplot-data-top-", Sys.Date(), ".csv", sep = "")
+        paste("percent-per-category-data", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
         dat <- processed_data()$pie_plot_dat
@@ -346,7 +346,7 @@ mod_pie_plot_func_server <- function(id, pool, raw_data_list){
 
     output$download_pie_plot_dat_bottom <- downloadHandler(
       filename = function() {
-        paste("pieplot-data-bottom-", Sys.Date(), ".csv", sep = "")
+        paste("concentration-per-category", Sys.Date(), ".csv", sep = "")
       },
       content = function(file) {
         dat <- processed_data()$concentration_plot_dat$concentration_dat
