@@ -1,56 +1,34 @@
-# Microplastics Concentration Calculation
+# Integrated Data QAQC and Visualization System
 
-This document explains the methodology used to calculate microplastic concentrations by integrating spectroscopy and microscopy data.
+This system streamlines environmental data workflows by integrating data validation, centralized storage, and interactive visualization. It is composed of three core components:
 
-## Data Extraction and Grouping
-1. **Spectroscopy Data:**  
-   - **Grouping:** Data are grouped by the following variables:  
-     `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
-   - **Count Calculation:**  
-     Count the total number of particles for each group, which we denote as `count_spectro`.
-   - **Microplastic Proportion:**  
-     For each group, calculate the fraction of microplastic particles as:
+1. **Data QAQC Checker**  
+   Users begin by submitting their data to the QAQC (Quality Assurance/Quality Control) checker. This step ensures the integrity and standardization of incoming datasets.
 
-$$  \text{Percentage of Microplastics Particle} =  \frac{\text{Number of MP particles}}{\text{Total Number of Spectroscopy Particles}} $$
+2. **Centralized Database**  
+   Once validated, the data is automatically loaded into a centralized database, serving as the authoritative data source for all downstream analyses.
 
-2. **Microscopy Data:**  
-   - **Grouping:** Data are grouped by the same parameters:  
-     `bmp`, `year`, `event`, `location`, `matrix`, `replicate`, `size_fraction`.
-   - **Count Calculation:**  
-     Count the total number of particles for each group, denoted as `count_micro`.
+3. **Shiny Application**  
+   The web-based Shiny application, built with the modular and scalable Golem, retrieves raw data from the database, computes key statistics, and presents results through interactive visualizations.
 
-## Calculations
+## Key Features
 
-For each group, perform the following computations:
+- **Analysis Visualization**: Interactive charts and tables for exploring trends and summaries.
+- **MDA Analysis**: Minimum Detectable Abundance (MDA) calculations to assess data sensitivity.
+- **Data Download**: Export options for processed datasets and summary outputs.
 
-**Back-Calculated Particle Count:**  
-   The particle count is adjusted using the processing percentages. Depending on the sample type:
-   
-**If the sample is a subsample**:
+## Getting Started
 
-$$  \text{Back Calculated Particle Count} =  \frac{\text{Number of Microscopy Particles}}{\text{Percent Filter Counted} \ \times \ \text{Sample Processed}} $$
+- **Data Submission Template**: Use the official submission template available at [https://nexus.sccwrp.org/opcswampchecker/](https://nexus.sccwrp.org/opcswampchecker/) to prepare your data.
+- **Methodologies**: Detailed explanations of QAQC rules, statistical calculations, and visual outputs are accessible directly within the Shiny application.
 
-**If the sample is not a subsample**:
+## Technologies Used
 
-$$  \text{Back Calculated Particle Count} =  \frac{\text{Number of Specstrocopy Particles}}{\text{Percent Filter Counted} \ \times \ \text{Sample Processed}} $$
+- **R / Shiny** for front-end interactivity
+- **Golem Framework** for modular app structure
+- **Relational Database (e.g., PostgreSQL)** for data storage
+- **Custom R packages** for QAQC and statistical routines
 
-**Back-Calculated Microplastics Particle Count:**   
-   The microplastic-specific count is calculated by applying the microplastic fraction:
+## License
 
-$$  \text{Back Calculated MP Particle Count} = \text{Back Calculated Particle Count} \ \times \ \text{Percentage of Microplastics Particle}  $$
-
-**Concentration Calculation:**  
-   Finally, the concentrations are computed by normalizing the counts by the passing unit:
-
-**All Particle Concentration**:
-
-$$  \text{Concentration} = \frac{\text{Back Calculated Particle Count}}{\text{Unit Passing}} $$
-
-**Microplastics Particle Concentration**:
-
-$$  \text{Concentration} = \frac{\text{Back Calculated MP Particle Count}}{\text{Unit Passing}} $$
-
-
-
-
-
+This project is maintained by SCCWRP and subject to relevant institutional data use and sharing policies.
